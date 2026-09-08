@@ -1,0 +1,134 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+    <RootNamespace>PyRunner</RootNamespace>
+    <AssemblyName>PyRunner</AssemblyName>
+    <Version>1.0.0</Version>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.282</FileVersion>
+    <WindowsAppSdkVersion>1.5.250108004</WindowsAppSdkVersion>
+    <ApplicationIcon>Assets\AppIcon.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <Platforms>x64</Platforms>
+    <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
+    <UseWinUI>true</UseWinUI>
+    <EnableMsixTooling>false</EnableMsixTooling>
+    <WindowsPackageType>None</WindowsPackageType>
+    <!-- 自包含部署：运行时 DLL 随输出目录分发，摆脱机器级 Windows App Runtime 框架包依赖 -->
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <!-- NETSDK1206：WindowsAppSDK 内置 win10-* 旧式 RID 的提示，与本项目无关 -->
+    <NoWarn>$(NoWarn);NETSDK1206</NoWarn>
+    <!-- 包锁定文件：保障可重现构建，生成 PyRunner/packages.lock.json 随源码提交 -->
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <AssemblyMetadata Include="BuildNumber" Value="282" />
+    <AssemblyMetadata Include="ReleaseChannel" Value="stable" />
+    <AssemblyMetadata Include="WindowsAppSdkVersion" Value="$(WindowsAppSdkVersion)" />
+    <AssemblyMetadata Include="AuthorAccount" Value="@pyrunner_dev" />
+    <AssemblyMetadata Include="AuthorIdentity" Value="independent_developer" />
+    <AssemblyMetadata Include="License" Value="MIT" />
+    <AssemblyMetadata Include="UpdateChannel" Value="stable" />
+  </ItemGroup>
+
+  <!-- dotnet CLI 构建时 MSBuildExtensionsPath/VisualStudioVersion 解析不到 VS 工具目录，
+       PriGen（resources.pri 生成）所需的 MSBuild 任务程序集需要 AppxMSBuildToolsPath。
+       仅在环境变量/外部未设置且现有值目录不存在时兜底推导（基于 MSBuildProgramFiles32，
+       不写死盘符）；CI/其他机器可通过设置同名属性覆盖。 -->
+  <PropertyGroup Condition="'$(AppxMSBuildToolsPath)' == '' or !Exists('$(AppxMSBuildToolsPath)')">
+    <AppxMSBuildToolsPath>$(MSBuildProgramFiles32)\Microsoft Visual Studio\2022\BuildTools\MSBuild\Microsoft\VisualStudio\v17.0\AppxPackage\</AppxMSBuildToolsPath>
+  </PropertyGroup>
+
+  <!-- 兜底推导后仍存在性校验：Build 前检查 AppxMSBuildToolsPath，不存在时报明确错误，
+       避免 PriGen 阶段以难懂的 MSB 错误失败 -->
+  <Target Name="ValidateAppxMSBuildToolsPath" BeforeTargets="Build">
+    <Error Condition="'$(AppxMSBuildToolsPath)' == '' or !Exists('$(AppxMSBuildToolsPath)')"
+           Text="AppxMSBuildToolsPath 不存在（当前值：$(AppxMSBuildToolsPath)）。请安装 Visual Studio 2022 BuildTools（含『C++ 桌面开发』或 Windows SDK 构建工具组件），或在构建时显式设置 -p:AppxMSBuildToolsPath=... 指向 AppxPackage 目录。" />
+  </Target>
+
+  <ItemGroup>
+    <!-- 注意：WindowsAppSDK 1.5 的 Microsoft.WinUI.dll 已内置 WebView2 类型投影，
+         再引用独立的 Microsoft.Web.WebView2 包会导致 CS0433 类型重复冲突，故不引用。 -->
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.*" />
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.22621.*" />
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="$(WindowsAppSdkVersion)" />
+    <!-- 数据层：SQLite + Dapper 轻量映射 -->
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.*" />
+    <PackageReference Include="Dapper" Version="2.1.*" />
+    <!-- DI 容器 -->
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- 迁移 SQL 与本地化 resw 以嵌入资源随程序集分发；
+         resw 由自建 LocalizationService 运行时解析（支持热切换），
+         因此从 PRIResource 中排除，避免 PRI 重复处理。 -->
+    <PRIResource Remove="Resources\**\*.resw" />
+    <EmbeddedResource Include="Data\Migrations\001_initial.sql" />
+    <EmbeddedResource Include="Resources\Strings.resw" LogicalName="PyRunner.Resources.Strings.resw" />
+    <!-- MSBuild 会把文化目录名中的 '-' 转成 '_'，用 LogicalName 固定为 LocalizationService 期望的资源名 -->
+    <EmbeddedResource Include="Resources\zh-CN\Strings.resw" LogicalName="PyRunner.Resources.zh-CN.Strings.resw" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Manifest Include="$(ApplicationManifest)" />
+    <Content Include="Assets\AppIcon.ico">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <_OpenSourceNotice Include="..\LICENSE" TargetPath="LICENSE" />
+    <_OpenSourceNotice Include="..\THIRD-PARTY-NOTICES.md" TargetPath="THIRD-PARTY-NOTICES.md" />
+    <_OpenSourceNotice Include="..\licenses\third-party\**\*"
+                       TargetPath="licenses\third-party\%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <Target Name="CopyOpenSourceNoticesToOutput" AfterTargets="Build">
+    <Copy SourceFiles="@(_OpenSourceNotice)"
+          DestinationFiles="@(_OpenSourceNotice->'$(TargetDir)%(TargetPath)')"
+          SkipUnchangedFiles="true" />
+  </Target>
+
+  <Target Name="CopyOpenSourceNoticesToPublish" AfterTargets="Publish"
+          Condition="'$(PublishDir)' != ''">
+    <Copy SourceFiles="@(_OpenSourceNotice)"
+          DestinationFiles="@(_OpenSourceNotice->'$(PublishDir)%(TargetPath)')"
+          SkipUnchangedFiles="true" />
+  </Target>
+
+  <!-- 前端资源：原样拷贝到输出目录（保持 wwwroot/ 子目录结构） -->
+  <ItemGroup>
+    <None Update="Terminal\wwwroot\**">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <!-- dotnet publish 对未打包 WinUI 3 项目不会自动把 XAML 编译产物
+       （PyRunner.pri / *.xbf）从 TargetDir 带入 PublishDir。缺少它们时应用
+       只能显示空白的 "WinUI Desktop" 宿主窗口。发布完成后显式复制这些
+       运行时资源；原始主题/图标 XAML 一并保留，便于 Source URI 回退加载。 -->
+  <Target Name="CopyWinUIRuntimeResourcesToPublishDirectory" AfterTargets="Publish"
+          Condition="'$(PublishDir)' != '' and Exists('$(TargetDir)')">
+    <ItemGroup>
+      <_WinUIRuntimeResource Include="$(TargetDir)**\*.xbf" />
+      <_WinUIRuntimeResource Include="$(TargetDir)$(AssemblyName).pri"
+                            Condition="Exists('$(TargetDir)$(AssemblyName).pri')" />
+      <_WinUIXamlSource Include="$(TargetDir)Assets\**\*.xaml" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_WinUIRuntimeResource)"
+          DestinationFiles="@(_WinUIRuntimeResource->'$(PublishDir)%(RecursiveDir)%(Filename)%(Extension)')"
+          SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(_WinUIXamlSource)"
+          DestinationFiles="@(_WinUIXamlSource->'$(PublishDir)Assets\%(RecursiveDir)%(Filename)%(Extension)')"
+          SkipUnchangedFiles="true" />
+  </Target>
+
+</Project>

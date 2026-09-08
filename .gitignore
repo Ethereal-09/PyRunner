@@ -1,0 +1,70 @@
+# Visual Studio
+.vs/
+.idea/
+.vscode/
+*.user
+*.suo
+*.rsuser
+*.userosscache
+*.sln.docstates
+
+# .NET
+**/bin/
+**/obj/
+**/TestResults/
+TestResults/
+*.pdb
+*.cache
+
+# Generated output
+publish/
+artifacts/
+Installer/Output/
+tools/InnoSetup/
+
+# Runtime data
+settings.json
+pyrunner.db
+pyrunner.db-*
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# WebView2 data
+**/EBWebView/
+**/*.exe.WebView2/
+
+# Logs and temporary files
+*.log
+*.tmp
+*.bak
+*.out.txt
+*.err.txt
+
+# Packages and installers
+node_modules/
+*.tgz
+npm-debug.log*
+*.zip
+*.7z
+*.msix
+*.msixbundle
+*.appx
+*.appxbundle
+
+# Secrets and signing files
+.env
+.env.*
+!.env.example
+*.pfx
+*.p12
+*.snk
+*.pem
+*.key
+
+# OS files
+Thumbs.db
+Desktop.ini
+.DS_Store

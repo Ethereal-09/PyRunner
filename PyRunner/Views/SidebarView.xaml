@@ -1,0 +1,413 @@
+<UserControl
+    x:Class="PyRunner.Views.SidebarView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:PyRunner.Views"
+    AutomationProperties.AutomationId="SidebarView">
+
+    <UserControl.Resources>
+        <local:BoolToVisibilityConverter x:Key="BoolToVisibility" />
+        <local:NonEmptyToVisibilityConverter x:Key="NonEmptyToVisibility" />
+        <local:RunStatusToBrushConverter x:Key="StatusToBrush" />
+        <local:InvalidNodeForegroundConverter x:Key="InvalidForeground" />
+        <local:InvalidNodeTextDecorationsConverter x:Key="InvalidDecorations" />
+        <local:MiddleEllipsisConverter x:Key="MiddleEllipsis" />
+        <local:FileTreeIconSelector
+            x:Key="TreeIconSelector"
+            FolderTemplate="{StaticResource Icon_Folder}"
+            ScriptTemplate="{StaticResource Icon_ScriptPy}"
+            StarTemplate="{StaticResource Icon_Star}" />
+    </UserControl.Resources>
+
+    <Grid Background="Transparent">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- 顶部：脚本库 / 资源管理器 + 刷新 / 设置。脚本由配置目录自动发现。 -->
+        <Border Grid.Row="0" BorderBrush="{ThemeResource BorderSubtleBrush}" BorderThickness="0,0,0,1">
+            <Grid Padding="16,12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                    <TextBlock
+                        Text="{Binding Title}"
+                        FontSize="{ThemeResource FontSizeH3}"
+                        FontWeight="SemiBold"
+                        Foreground="{ThemeResource TextPrimaryBrush}"
+                        VerticalAlignment="Center" />
+                    <TextBlock
+                        Text="{Binding ResourceManagerText}"
+                        FontSize="11"
+                        Foreground="{ThemeResource TextMutedBrush}"
+                        VerticalAlignment="Center" />
+                </StackPanel>
+                <Button
+                    x:Name="RefreshButton"
+                    AutomationProperties.AutomationId="SidebarRefreshButton"
+                    AutomationProperties.Name="{Binding RefreshText}"
+                    Grid.Column="1"
+                    Width="30" Height="30" MinWidth="30" MinHeight="30"
+                    Padding="7"
+                    Margin="0,0,3,0"
+                    Background="Transparent"
+                    BorderBrush="Transparent"
+                    Click="OnRefreshClick">
+                    <ContentControl ContentTemplate="{StaticResource Icon_Refresh}" Width="16" Height="16" IsTabStop="False" />
+                </Button>
+                <Button
+                    x:Name="SidebarSettingsButton"
+                    AutomationProperties.AutomationId="SidebarSettingsButton"
+                    AutomationProperties.Name="{Binding SettingsText}"
+                    Grid.Column="2"
+                    Width="30" Height="30" MinWidth="30" MinHeight="30"
+                    Padding="7"
+                    Background="Transparent"
+                    BorderBrush="Transparent"
+                    Click="OnSidebarSettingsClick">
+                    <ContentControl ContentTemplate="{StaticResource Icon_Settings}" Width="16" Height="16" IsTabStop="False" />
+                </Button>
+            </Grid>
+        </Border>
+
+        <!-- 搜索框：Text 双向绑定 VM.SearchKeyword（VM 内 250ms 防抖） -->
+        <Grid Grid.Row="1" Margin="8,8,8,6">
+            <TextBox
+                x:Name="SidebarSearchBox"
+                AutomationProperties.AutomationId="SidebarSearchBox"
+                Height="34" MinHeight="34"
+                Padding="34,6,10,6"
+                FontSize="12.5"
+                Background="{ThemeResource GhostButtonHoverBrush}"
+                BorderBrush="Transparent"
+                BorderThickness="0"
+                CornerRadius="8"
+                PlaceholderText="{Binding SearchPlaceholder}"
+                Text="{Binding SearchKeyword, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+            <ContentControl
+                ContentTemplate="{StaticResource Icon_Search}"
+                Width="14" Height="14"
+                Margin="12,0,0,0"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Center"
+                IsHitTestVisible="False"
+                IsTabStop="False" />
+        </Grid>
+
+        <!-- 降级横幅（评审修复）：DB 损坏/锁死致树数据层失败时，默认树视图也可见（不限搜索态）；
+             DataContext 由代码后置设为文件树 VM（IsTreeDegraded/TreeDegradedText） -->
+        <TextBlock
+            x:Name="TreeDegradedBanner"
+            Grid.Row="2"
+            Text="{Binding TreeDegradedText}"
+            FontSize="{ThemeResource FontSizeOverline}"
+            Foreground="{ThemeResource StatusWarningBrush}"
+            TextWrapping="Wrap"
+            Margin="16,0,16,8"
+            Visibility="{Binding IsTreeDegraded, Converter={StaticResource BoolToVisibility}}" />
+
+        <!-- ==== 内容区（AutomationId 挂外层容器：TreeView 自身 AutomationId
+             会被内部列表控件的 peer 覆盖，UIA 冒烟经此容器下钻） ==== -->
+        <Grid Grid.Row="3" AutomationProperties.AutomationId="SidebarFileTree">
+
+            <!-- 两段式文件树（默认视图）：顶部虚拟节点 + 下方真实目录树（懒加载）。
+                 搜索激活时切换为过滤列表（见下方 ListView）。 -->
+            <TreeView
+                x:Name="FileTree"
+                Padding="0,2,0,0"
+                SelectionMode="Single"
+                Visibility="{Binding IsSearchActive, Converter={StaticResource BoolToVisibility}, ConverterParameter=Invert}">
+                <!-- WinUI3 TreeViewItem 默认 HorizontalContentAlignment=Left，内容区不拉伸（
+                     实测名称列退化为单字宽）；必须显式 Stretch 后 * 列才有效。 -->
+                <TreeView.ItemContainerStyle>
+                    <Style TargetType="TreeViewItem">
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                        <Setter Property="MinHeight" Value="34" />
+                        <Setter Property="Margin" Value="8,0" />
+                        <Setter Property="CornerRadius" Value="8" />
+                    </Style>
+                </TreeView.ItemContainerStyle>
+                <TreeView.ItemTemplate>
+                    <DataTemplate>
+                        <!-- 注：TreeView 的 ItemTemplate 宿主需 ItemContainerStyle 设
+                             HorizontalContentAlignment=Stretch（见上方），否则 * 列退化为最小宽度。 -->
+                        <Grid Padding="0,2">
+                            <!-- 树展开动画近似（Phase E / A-30）：WinUI TreeView 无原生展开动画，
+                                 子项容器实例化时经 EntranceThemeTransition 淡入（计划已拍板按近似达标）。
+                                 坑：显式写 IsAnimatingNewContainers="True" 会触发 XamlCompiler 静默退出码 1
+                                 （Windows App SDK 1.5.250108004 已知工具链缺陷），省略该属性即为默认 True -->
+                            <Grid.ChildrenTransitions>
+                                <TransitionCollection>
+                                    <EntranceThemeTransition FromVerticalOffset="6" />
+                                </TransitionCollection>
+                            </Grid.ChildrenTransitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <!-- RootNodes 模式下 DataTemplate 的 DataContext 是 TreeViewNode（非 VM），
+                                 所有绑定须走 Content.* 路径。 -->
+                            <ContentControl
+                                Width="16" Height="16"
+                                Margin="0,0,8,0"
+                                Content="{Binding}"
+                                ContentTemplateSelector="{StaticResource TreeIconSelector}"
+                                IsTabStop="False"
+                                VerticalAlignment="Center" />
+                            <TextBlock
+                                Grid.Column="1"
+                                Text="{Binding Content.Name, Converter={StaticResource MiddleEllipsis}, ConverterParameter=30}"
+                                ToolTipService.ToolTip="{Binding Content.FullPath}"
+                                FontSize="{ThemeResource FontSizeBody}"
+                                Foreground="{ThemeResource TextPrimaryBrush}"
+                                TextDecorations="{Binding Content.IsInvalid, Converter={StaticResource InvalidDecorations}}"
+                                TextTrimming="CharacterEllipsis"
+                                VerticalAlignment="Center" />
+                            <!-- 数量徽章（虚拟节点/分类） -->
+                            <Border
+                                Grid.Column="2"
+                                Visibility="{Binding Content.BadgeText, Converter={StaticResource NonEmptyToVisibility}}"
+                                Margin="8,0,0,0"
+                                Padding="8,1"
+                                Background="{ThemeResource BadgeSurfaceBrush}"
+                                CornerRadius="10"
+                                VerticalAlignment="Center">
+                                <TextBlock
+                                    Text="{Binding Content.BadgeText}"
+                                    FontSize="{ThemeResource FontSizeOverline}"
+                                    Foreground="{ThemeResource BadgeForegroundBrush}" />
+                            </Border>
+
+                            <!-- 右键菜单（Phase E：运行 / 记事本 / 收藏切换）：仅已登记 .py
+                                 节点展示对应条目（Opening 时按节点能力重建 Items，
+                                 空 flyout 不弹出；见代码后置 OnTreeMenuOpening） -->
+                            <Grid.ContextFlyout>
+                                <MenuFlyout Opening="OnTreeMenuOpening">
+                                    <MenuFlyoutItem Text="{Binding Content.MenuRunText}" Click="OnMenuRunTreeClick" />
+                                    <MenuFlyoutItem Text="{Binding Content.MenuNotebookText}" Click="OnMenuNotebookTreeClick" />
+                                    <MenuFlyoutItem Text="{Binding Content.MenuFavoriteText}" Click="OnMenuFavoriteTreeClick" />
+                                </MenuFlyout>
+                            </Grid.ContextFlyout>
+                        </Grid>
+                    </DataTemplate>
+                </TreeView.ItemTemplate>
+            </TreeView>
+
+            <!-- 搜索过滤列表（Phase B 脚本列表，搜索激活时显示） -->
+            <ListView
+                x:Name="ScriptListView"
+                AutomationProperties.AutomationId="ScriptListView"
+                SelectionMode="Single"
+                IsEnabled="{Binding IsListAvailable}"
+                SelectedItem="{Binding SelectedItem, Mode=TwoWay}"
+                Visibility="{Binding IsSearchActive, Converter={StaticResource BoolToVisibility}}">
+                <ListView.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <ItemsStackPanel AreStickyGroupHeadersEnabled="True" />
+                    </ItemsPanelTemplate>
+                </ListView.ItemsPanel>
+                <ListView.GroupStyle>
+                    <GroupStyle>
+                        <GroupStyle.HeaderTemplate>
+                            <DataTemplate>
+                                <TextBlock
+                                    Text="{Binding Name}"
+                                    FontSize="12"
+                                    Foreground="{ThemeResource TextMutedBrush}"
+                                    Margin="4,8,0,4" />
+                            </DataTemplate>
+                        </GroupStyle.HeaderTemplate>
+                    </GroupStyle>
+                </ListView.GroupStyle>
+                <ListView.ItemTemplate>
+                    <DataTemplate>
+                        <!-- AutomationProperties.Name：UIA 列表项默认暴露 VM 类型名，
+                             显式标注脚本名（无障碍 + UIA 测试可寻址） -->
+                        <Grid Padding="2,6" AutomationProperties.Name="{Binding Name}">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock
+                                    Text="{Binding Name}"
+                                    Foreground="{ThemeResource TextTitleBrush}"
+                                    TextTrimming="CharacterEllipsis"
+                                    VerticalAlignment="Center" />
+                                <!-- 运行状态徽章（Phase B 占位：恒 NotRun；颜色经主题转换器） -->
+                                <TextBlock
+                                    Grid.Column="1"
+                                    Text="{Binding StatusText}"
+                                    FontSize="11"
+                                    Foreground="{Binding Status, Converter={StaticResource StatusToBrush}}"
+                                    Margin="8,0,0,0"
+                                    VerticalAlignment="Center" />
+                                <!-- 「更多」入口：与右键菜单等价（UIA 冒烟友好） -->
+                                <Button
+                                    Grid.Column="2"
+                                    AutomationProperties.AutomationId="ItemMoreButton"
+                                    Content="&#xE712;"
+                                    FontFamily="Segoe MDL2 Assets"
+                                    FontSize="12"
+                                    MinHeight="24"
+                                    MinWidth="28"
+                                    Padding="0"
+                                    Margin="6,0,0,0"
+                                    Background="Transparent"
+                                    BorderBrush="Transparent">
+                                    <Button.Flyout>
+                                        <MenuFlyout>
+                                            <MenuFlyoutItem Text="{Binding MenuRunText}" Click="OnMenuRunClick" />
+                                            <MenuFlyoutItem Text="{Binding MenuEditText}" Click="OnMenuEditClick" />
+                                            <MenuFlyoutItem Text="{Binding MenuNotebookText}" Click="OnMenuNotebookClick" />
+                                            <MenuFlyoutItem Text="{Binding MenuFavoriteText}" Click="OnMenuFavoriteClick" />
+                                            <MenuFlyoutItem Text="{Binding MenuDeleteText}" Click="OnMenuDeleteClick" />
+                                        </MenuFlyout>
+                                    </Button.Flyout>
+                                </Button>
+                            </Grid>
+
+                            <!-- 路径：次要色小字 -->
+                            <TextBlock
+                                Grid.Row="1"
+                                Text="{Binding FilePath, Converter={StaticResource MiddleEllipsis}, ConverterParameter=38}"
+                                ToolTipService.ToolTip="{Binding FilePath}"
+                                FontSize="11"
+                                Foreground="{ThemeResource TextMutedBrush}"
+                                TextTrimming="CharacterEllipsis"
+                                Margin="0,2,0,0" />
+
+                            <!-- 右键菜单：运行 / 编辑 / 记事本 / 收藏 / 删除 -->
+                            <Grid.ContextFlyout>
+                                <MenuFlyout>
+                                    <MenuFlyoutItem Text="{Binding MenuRunText}" Click="OnMenuRunClick" />
+                                    <MenuFlyoutItem Text="{Binding MenuEditText}" Click="OnMenuEditClick" />
+                                    <MenuFlyoutItem Text="{Binding MenuNotebookText}" Click="OnMenuNotebookClick" />
+                                    <MenuFlyoutItem Text="{Binding MenuFavoriteText}" Click="OnMenuFavoriteClick" />
+                                    <MenuFlyoutItem Text="{Binding MenuDeleteText}" Click="OnMenuDeleteClick" />
+                                </MenuFlyout>
+                            </Grid.ContextFlyout>
+                        </Grid>
+                    </DataTemplate>
+                </ListView.ItemTemplate>
+            </ListView>
+
+            <!-- 空状态（Phase E 统一改用参数化 EmptyStateView）：搜索无结果 -->
+            <local:EmptyStateView
+                x:Name="NoResultEmpty"
+                IconTemplate="{StaticResource Icon_Search}"
+                Description="{Binding NoResultText}"
+                ActionButtonText="{Binding NoResultClearText}"
+                ShowButton="True"
+                ActionRequested="OnEmptyClearSearchRequested"
+                Visibility="{Binding ShowNoResult, Converter={StaticResource BoolToVisibility}}" />
+
+            <!-- 数据层不可用：仅列表降级，终端链路不受影响（搜索激活时提示） -->
+            <Grid Visibility="{Binding IsListAvailable, Converter={StaticResource BoolToVisibility}, ConverterParameter=Invert}">
+                <TextBlock
+                    Text="{Binding UnavailableText}"
+                    Foreground="{ThemeResource TextMutedBrush}"
+                    VerticalAlignment="Center"
+                    HorizontalAlignment="Center" />
+            </Grid>
+
+            <!-- 树视图空状态（第 1 类：无脚本路径）：引导到设置；DataContext 由代码后置设为文件树 VM -->
+            <local:EmptyStateView
+                x:Name="TreeEmptyOverlay"
+                IconTemplate="{StaticResource Icon_Folder}"
+                Description="{Binding NoScriptPathsText}"
+                ActionButtonText="{Binding OpenSettingsText}"
+                ShowButton="True"
+                ActionRequested="OnOpenSettingsRequested"
+                Visibility="Collapsed" />
+
+            <!-- 空状态引导（第 2 类：已配置目录但没有 .py）：仅引导管理脚本目录。 -->
+            <local:EmptyStateView
+                x:Name="EmptyGuideOverlay"
+                IconTemplate="{StaticResource Icon_ScriptPy}"
+                Description="{Binding EmptyText}"
+                ActionButtonText="{Binding OpenSettingsText}"
+                ShowButton="True"
+                ActionRequested="OnOpenSettingsRequested"
+                Visibility="Collapsed" />
+
+            <!-- 加载态（Phase E）：手动刷新/监听重建期间 ProgressRing；
+                 DataContext 由代码后置设为文件树 VM（IsLoading/LoadingText） -->
+            <Grid
+                x:Name="SidebarLoadingOverlay"
+                Background="Transparent"
+                IsHitTestVisible="False"
+                Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibility}}">
+                <StackPanel
+                    VerticalAlignment="Top"
+                    HorizontalAlignment="Center"
+                    Orientation="Horizontal"
+                    Spacing="8"
+                    Margin="0,12,0,0">
+                    <ProgressRing Width="16" Height="16" MinWidth="16" MinHeight="16" IsActive="True" />
+                    <TextBlock
+                        Text="{Binding LoadingText}"
+                        FontSize="{ThemeResource FontSizeOverline}"
+                        Foreground="{ThemeResource TextMutedBrush}"
+                        VerticalAlignment="Center" />
+                </StackPanel>
+            </Grid>
+        </Grid>
+
+        <!-- 底部：已连接解释器区（数据来自 InterpreterService，见 FileTreeViewModel） -->
+        <Border Grid.Row="4" BorderBrush="{ThemeResource BorderSubtleBrush}" BorderThickness="0,1,0,0">
+        <StackPanel
+            x:Name="InterpreterPanel"
+            Margin="14,10"
+            Spacing="4">
+            <TextBlock
+                Text="{Binding InterpreterTitle}"
+                FontSize="{ThemeResource FontSizeOverline}"
+                Foreground="{ThemeResource TextMutedBrush}" />
+            <ItemsControl ItemsSource="{Binding Interpreters}" IsTabStop="False">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Ellipse
+                                Width="8" Height="8"
+                                Fill="{ThemeResource AccentBrush}"
+                                VerticalAlignment="Center" />
+                            <TextBlock
+                                Text="{Binding Name}"
+                                FontSize="{ThemeResource FontSizeOverline}"
+                                Foreground="{ThemeResource TextSecondaryBrush}"
+                                TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <!-- 「无解释器」空状态（评审修 5，PRD §6.8.1 口径）：图标 + 文案 + 「打开设置」
+                 引导按钮直达 SettingsDialog 解释器分组（OpenInterpreterSettingsRequested
+                 → MainWindow.OnSidebarOpenInterpreterSettings）。旧实现仅一行禁用色小字，
+                 无引导入口，不符合 §6.8.1。 -->
+            <local:EmptyStateView
+                x:Name="NoInterpreterEmpty"
+                IconTemplate="{StaticResource Icon_ScriptPy}"
+                Description="{Binding NoInterpreterText}"
+                ActionButtonText="{Binding OpenSettingsText}"
+                ShowButton="True"
+                ActionRequested="OnOpenInterpreterSettingsRequested"
+                Visibility="{Binding ShowNoInterpreter, Converter={StaticResource BoolToVisibility}}" />
+        </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

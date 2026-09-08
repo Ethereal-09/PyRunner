@@ -1,0 +1,43 @@
+* text=auto
+
+*.sln text eol=lf
+*.csproj text eol=lf
+*.props text eol=lf
+*.targets text eol=lf
+*.cs text eol=lf
+*.xaml text eol=lf
+*.xml text eol=lf
+*.json text eol=lf
+*.resw text eol=lf
+*.md text eol=lf
+*.ps1 text eol=lf
+*.iss text eol=lf
+*.sql text eol=lf
+*.html text eol=lf
+*.css text eol=lf
+*.js text eol=lf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.bmp binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.otf binary
+*.db binary
+*.sqlite binary
+*.sqlite3 binary
+*.dll binary
+*.exe binary
+*.zip binary
+*.7z binary
+*.msix binary
+*.msixbundle binary
+*.appx binary
+*.appxbundle binary
+
+# Preserve official third-party license and notice text byte-for-byte.
+licenses/third-party/** -text -whitespace

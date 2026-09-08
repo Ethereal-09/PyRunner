@@ -1,0 +1,628 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms</value>
+  </resheader>
+
+  <!-- ==== Script edit dialog ==== -->
+  <data name="ScriptEdit_Title_Edit" xml:space="preserve">
+    <value>Edit Script</value>
+  </data>
+  <data name="Field_Name" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="Field_FilePath" xml:space="preserve">
+    <value>File Path</value>
+  </data>
+  <data name="Field_FilePath_Placeholder" xml:space="preserve">
+    <value>Absolute path to a .py file</value>
+  </data>
+  <data name="Field_Category" xml:space="preserve">
+    <value>Category</value>
+  </data>
+  <data name="Field_Tags" xml:space="preserve">
+    <value>Tags</value>
+  </data>
+  <data name="Field_Description" xml:space="preserve">
+    <value>Description</value>
+  </data>
+  <data name="Field_Interpreter" xml:space="preserve">
+    <value>Interpreter</value>
+  </data>
+  <data name="Field_Arguments" xml:space="preserve">
+    <value>Arguments</value>
+  </data>
+  <data name="Field_WorkingDirectory" xml:space="preserve">
+    <value>Working Directory</value>
+  </data>
+  <data name="Interpreter_Default" xml:space="preserve">
+    <value>Default</value>
+  </data>
+
+  <!-- ==== Common buttons ==== -->
+  <data name="Button_Save" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="Button_Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="Button_Delete" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="Button_OK" xml:space="preserve">
+    <value>OK</value>
+  </data>
+  <data name="Button_Browse" xml:space="preserve">
+    <value>Browse…</value>
+  </data>
+  <data name="Button_Run" xml:space="preserve">
+    <value>Run</value>
+  </data>
+  <data name="Button_Stop" xml:space="preserve">
+    <value>Stop</value>
+  </data>
+  <data name="Button_OpenSettings" xml:space="preserve">
+    <value>Open Settings</value>
+  </data>
+
+  <!-- ==== Window / startup ==== -->
+  <data name="Window_Title" xml:space="preserve">
+    <value>PyRunner</value>
+  </data>
+  <data name="Error_WebViewInitFailed" xml:space="preserve">
+    <value>Terminal initialization failed.</value>
+  </data>
+  <data name="Error_AppInitFailed_Title" xml:space="preserve">
+    <value>PyRunner failed to start</value>
+  </data>
+  <data name="Error_AppInitFailed" xml:space="preserve">
+    <value>Database initialization failed. The application will now exit. Please check the %LOCALAPPDATA%\PyRunner directory and try again.</value>
+  </data>
+
+  <!-- ==== Validation errors ==== -->
+  <data name="Error_NameRequired" xml:space="preserve">
+    <value>Name is required.</value>
+  </data>
+  <data name="Error_PathRequired" xml:space="preserve">
+    <value>File path is required.</value>
+  </data>
+  <data name="Error_PathNotFound" xml:space="preserve">
+    <value>The file does not exist.</value>
+  </data>
+  <data name="Error_PathNotPy" xml:space="preserve">
+    <value>The file must be a .py script.</value>
+  </data>
+  <data name="Error_PathDuplicate" xml:space="preserve">
+    <value>This script is already registered.</value>
+  </data>
+  <data name="Error_InterpreterInUse" xml:space="preserve">
+    <value>This interpreter is referenced by scripts and cannot be removed.</value>
+  </data>
+  <data name="Error_InterpreterNotFound" xml:space="preserve">
+    <value>The interpreter executable does not exist.</value>
+  </data>
+  <data name="Error_InterpreterIsPythonw" xml:space="preserve">
+    <value>pythonw.exe has no stdin/stdout and cannot be used.</value>
+  </data>
+  <data name="Error_DirectoryNotFound" xml:space="preserve">
+    <value>The directory does not exist.</value>
+  </data>
+  <data name="Error_SaveFailed" xml:space="preserve">
+    <value>Failed to save. Please try again.</value>
+  </data>
+  <data name="Error_ArgumentsQuoteMismatch" xml:space="preserve">
+    <value>The arguments contain an unmatched double quote. Quotes must be paired.</value>
+  </data>
+
+  <!-- ==== Delete confirmation ==== -->
+  <data name="DeleteConfirm_Title" xml:space="preserve">
+    <value>Remove Script</value>
+  </data>
+  <data name="DeleteConfirm_Content" xml:space="preserve">
+    <value>Only the record will be removed from PyRunner. The script file on disk will NOT be deleted.</value>
+  </data>
+
+  <!-- ==== Title bar / status bar (Phase B) ==== -->
+  <data name="App_Name" xml:space="preserve">
+    <value>PyRunner Manager</value>
+  </data>
+  <data name="Status_Initializing" xml:space="preserve">
+    <value>Initializing…</value>
+  </data>
+  <data name="Status_Ready" xml:space="preserve">
+    <value>Ready</value>
+  </data>
+  <data name="Status_FrontendLoading" xml:space="preserve">
+    <value>Loading frontend…</value>
+  </data>
+  <data name="Status_Connected" xml:space="preserve">
+    <value>ConPTY connected</value>
+  </data>
+  <data name="Status_ProcessExited" xml:space="preserve">
+    <value>Process exited (code={0})</value>
+  </data>
+  <data name="Status_PythonStartFailed" xml:space="preserve">
+    <value>Python failed to start: {0}</value>
+  </data>
+  <data name="Status_Exited" xml:space="preserve">
+    <value>Exited</value>
+  </data>
+
+  <!-- ==== Sidebar script list (Phase B) ==== -->
+  <data name="Sidebar_Title" xml:space="preserve">
+    <value>Library</value>
+  </data>
+  <data name="Sidebar_SearchPlaceholder" xml:space="preserve">
+    <value>Search scripts or type / …</value>
+  </data>
+  <data name="Sidebar_Empty_Text" xml:space="preserve">
+    <value>No .py files found in configured folders. New files are imported automatically.</value>
+  </data>
+  <data name="Sidebar_NoResult_Text" xml:space="preserve">
+    <value>No matching scripts</value>
+  </data>
+  <data name="Sidebar_NoResult_Clear" xml:space="preserve">
+    <value>Clear search</value>
+  </data>
+  <data name="Sidebar_Unavailable" xml:space="preserve">
+    <value>Script list is currently unavailable</value>
+  </data>
+  <data name="Menu_Edit" xml:space="preserve">
+    <value>Edit</value>
+  </data>
+  <data name="Menu_Delete" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="Menu_Run" xml:space="preserve">
+    <value>Run</value>
+  </data>
+  <data name="Category_Uncategorized" xml:space="preserve">
+    <value>Uncategorized</value>
+  </data>
+
+  <!-- ==== Run status badge (Phase B placeholder, consumed in Phase D) ==== -->
+  <data name="StatusBadge_NotRun" xml:space="preserve">
+    <value>Not run</value>
+  </data>
+  <data name="StatusBadge_Running" xml:space="preserve">
+    <value>Running</value>
+  </data>
+  <data name="StatusBadge_Success" xml:space="preserve">
+    <value>Success</value>
+  </data>
+  <data name="StatusBadge_Failed" xml:space="preserve">
+    <value>Failed</value>
+  </data>
+  <data name="StatusBadge_Killed" xml:space="preserve">
+    <value>Killed</value>
+  </data>
+
+  <!-- ==== Multi-tab run workspace (Phase D) ==== -->
+  <data name="Workspace_Hint" xml:space="preserve">
+    <value>Select a script on the left and click Run. Each run opens in its own terminal tab.</value>
+  </data>
+  <data name="Workspace_SelectedHint" xml:space="preserve">
+    <value>The current script is selected. Click Run to start.</value>
+  </data>
+  <data name="Run_Error_Title" xml:space="preserve">
+    <value>Cannot run script</value>
+  </data>
+  <data name="Run_AlreadyRunning" xml:space="preserve">
+    <value>This script is already running. Wait for it to finish or stop it first.</value>
+  </data>
+  <data name="Run_ScriptNotFound" xml:space="preserve">
+    <value>The script file no longer exists on disk. Update or remove its registration.</value>
+  </data>
+  <data name="Run_NoInterpreter_Title" xml:space="preserve">
+    <value>No interpreter configured</value>
+  </data>
+  <data name="Run_NoInterpreter" xml:space="preserve">
+    <value>No Python interpreter is available to run this script. Add one in Settings first.</value>
+  </data>
+  <data name="Run_InterpreterMissing" xml:space="preserve">
+    <value>The configured interpreter executable no longer exists. Update it in Settings.</value>
+  </data>
+  <data name="Run_ArgumentsQuoteMismatch" xml:space="preserve">
+    <value>The script arguments contain an unmatched double quote. Edit the registration to fix the quotes.</value>
+  </data>
+  <data name="Status_RunFinished" xml:space="preserve">
+    <value>Run finished successfully</value>
+  </data>
+  <data name="Status_RunFailed" xml:space="preserve">
+    <value>Run failed</value>
+  </data>
+  <data name="Status_RunKilled" xml:space="preserve">
+    <value>Run stopped</value>
+  </data>
+
+  <!-- ==== Sidebar file tree (Phase C) ==== -->
+  <data name="Sidebar_TreeAllScripts" xml:space="preserve">
+    <value>All Scripts</value>
+  </data>
+  <data name="Sidebar_TreeFavorites" xml:space="preserve">
+    <value>Favorites</value>
+  </data>
+  <data name="Sidebar_TreeCategories" xml:space="preserve">
+    <value>Categories</value>
+  </data>
+  <data name="Sidebar_NoScriptPaths" xml:space="preserve">
+    <value>No script folders configured yet. Add folders in Settings.</value>
+  </data>
+  <data name="Sidebar_Interpreters" xml:space="preserve">
+    <value>Connected Python interpreters</value>
+  </data>
+  <data name="Sidebar_NoInterpreter" xml:space="preserve">
+    <value>No interpreter configured</value>
+  </data>
+
+  <!-- ==== Settings dialog (Phase C) ==== -->
+  <data name="Settings_Title" xml:space="preserve">
+    <value>Settings</value>
+  </data>
+  <data name="Settings_ScriptPaths" xml:space="preserve">
+    <value>Script folders</value>
+  </data>
+  <data name="Settings_AddFolder" xml:space="preserve">
+    <value>+ Add folder…</value>
+  </data>
+  <data name="Settings_Valid" xml:space="preserve">
+    <value>Valid</value>
+  </data>
+  <data name="Settings_Invalid" xml:space="preserve">
+    <value>Invalid</value>
+  </data>
+  <data name="Settings_Interpreters" xml:space="preserve">
+    <value>Python interpreters (version auto-detected)</value>
+  </data>
+  <data name="Settings_AddInterpreter" xml:space="preserve">
+    <value>+ Add interpreter…</value>
+  </data>
+  <data name="Settings_Connected" xml:space="preserve">
+    <value>Connected</value>
+  </data>
+  <data name="Settings_RunOptions" xml:space="preserve">
+    <value>Run options</value>
+  </data>
+  <data name="Settings_Opt_AutoClear" xml:space="preserve">
+    <value>Auto-clear output when a run finishes</value>
+  </data>
+  <data name="Settings_Opt_NotifyOnFail" xml:space="preserve">
+    <value>Popup alert when a script fails</value>
+  </data>
+  <data name="Settings_Opt_LiveFlush" xml:space="preserve">
+    <value>Refresh output in real time</value>
+  </data>
+  <data name="Settings_Opt_AutoStart" xml:space="preserve">
+    <value>Start with Windows</value>
+  </data>
+  <data name="Settings_Opt_AutoRefreshScripts" xml:space="preserve">
+    <value>Refresh the script library at startup</value>
+  </data>
+  <data name="Error_AutoStartFailed" xml:space="preserve">
+    <value>Windows startup could not be updated. Check your account permissions and try again.</value>
+  </data>
+  <data name="Settings_Language" xml:space="preserve">
+    <value>Language</value>
+  </data>
+  <data name="Settings_Language_Zh" xml:space="preserve">
+    <value>中文</value>
+  </data>
+  <data name="Settings_Language_En" xml:space="preserve">
+    <value>English</value>
+  </data>
+
+  <!-- ==== Sidebar context menu extensions (Phase E) ==== -->
+  <data name="Menu_OpenInNotepad" xml:space="preserve">
+    <value>Open in Notepad</value>
+  </data>
+  <data name="Menu_AddFavorite" xml:space="preserve">
+    <value>Add to Favorites</value>
+  </data>
+  <data name="Menu_RemoveFavorite" xml:space="preserve">
+    <value>Remove from Favorites</value>
+  </data>
+  <data name="Sidebar_NoFavorites" xml:space="preserve">
+    <value>No favorites yet</value>
+  </data>
+  <data name="Sidebar_Loading" xml:space="preserve">
+    <value>Scanning…</value>
+  </data>
+
+  <!-- ==== Run history panel (Phase E) ==== -->
+  <data name="History_Title" xml:space="preserve">
+    <value>Run history (last 10)</value>
+  </data>
+  <data name="History_Empty" xml:space="preserve">
+    <value>No runs yet for this script</value>
+  </data>
+  <data name="History_Detail_Title" xml:space="preserve">
+    <value>Full output</value>
+  </data>
+  <data name="History_Detail_Truncated" xml:space="preserve">
+    <value>Showing only the last {0} KB (output truncated)</value>
+  </data>
+
+  <!-- ==== Friendly notifications (Phase E) ==== -->
+  <data name="Notify_Title" xml:space="preserve">
+    <value>Heads up</value>
+  </data>
+  <data name="Notify_ScriptMissing" xml:space="preserve">
+    <value>The script file seems to have been moved or deleted. You can pick the file again, or remove its record.</value>
+  </data>
+  <data name="Notify_ReselectFile" xml:space="preserve">
+    <value>Re-select file</value>
+  </data>
+  <data name="Notify_RemoveRecord" xml:space="preserve">
+    <value>Remove record</value>
+  </data>
+  <data name="Notify_FileMissing" xml:space="preserve">
+    <value>The file no longer exists, so it cannot be opened.</value>
+  </data>
+  <data name="Notify_WebView2Missing" xml:space="preserve">
+    <value>The terminal component could not start. Please install the Microsoft Edge WebView2 Runtime and try again.</value>
+  </data>
+  <data name="Notify_Download" xml:space="preserve">
+    <value>Download</value>
+  </data>
+  <data name="Notify_RunFailed" xml:space="preserve">
+    <value>Script “{0}” exited with an error. Check the terminal output or run history for details.</value>
+  </data>
+  <data name="Terminal_ProcessExited" xml:space="preserve">
+    <value>Process exited, code={0}</value>
+  </data>
+  <data name="Language_QuickToggle" xml:space="preserve">
+    <value>中 / EN</value>
+  </data>
+  <data name="Nav_Scripts" xml:space="preserve">
+    <value>Scripts</value>
+  </data>
+  <data name="Nav_Runs" xml:space="preserve">
+    <value>Runs</value>
+  </data>
+  <data name="Nav_Settings" xml:space="preserve">
+    <value>Settings</value>
+  </data>
+  <data name="Sidebar_ResourceManager" xml:space="preserve">
+    <value>· Explorer</value>
+  </data>
+  <data name="Sidebar_Refresh" xml:space="preserve">
+    <value>Refresh</value>
+  </data>
+  <data name="Button_Edit" xml:space="preserve">
+    <value>Edit</value>
+  </data>
+  <data name="Script_NoneSelected" xml:space="preserve">
+    <value>Select a script</value>
+  </data>
+  <data name="Script_SelectHint" xml:space="preserve">
+    <value>Select a registered Python script from the explorer</value>
+  </data>
+  <data name="Terminal_TabFormat" xml:space="preserve">
+    <value>Terminal · {0}</value>
+  </data>
+  <data name="Terminal_TabEmpty" xml:space="preserve">
+    <value>Terminal</value>
+  </data>
+  <data name="Terminal_CommandPlaceholder" xml:space="preserve">
+    <value>&gt; python script.py</value>
+  </data>
+  <data name="Status_NoRun" xml:space="preserve">
+    <value>No recent run</value>
+  </data>
+  <data name="Status_NoDirectory" xml:space="preserve">
+    <value>—</value>
+  </data>
+  <data name="Status_DirectoryFormat" xml:space="preserve">
+    <value>{0}</value>
+  </data>
+  <data name="Status_LastRunFormat" xml:space="preserve">
+    <value>{0}  {1}</value>
+  </data>
+  <data name="Error_Database_Title" xml:space="preserve">
+    <value>Data file problem</value>
+  </data>
+  <data name="Error_Database_Content" xml:space="preserve">
+    <value>PyRunner could not open its data file. Try repairing it, or back it up and create a new database. Your Python script files will not be changed.</value>
+  </data>
+  <data name="Error_Database_RecoveryFailed" xml:space="preserve">
+    <value>Recovery did not complete. You can try the other recovery option or exit and inspect the data folder.</value>
+  </data>
+  <data name="Button_Repair" xml:space="preserve">
+    <value>Repair</value>
+  </data>
+  <data name="Button_BackupRebuild" xml:space="preserve">
+    <value>Back up and rebuild</value>
+  </data>
+  <data name="Button_Exit" xml:space="preserve">
+    <value>Exit</value>
+  </data>
+
+  <!-- ==== First-run wizard (Phase E) ==== -->
+  <data name="Wizard_Title" xml:space="preserve">
+    <value>Welcome to PyRunner</value>
+  </data>
+  <data name="Wizard_Welcome_Title" xml:space="preserve">
+    <value>Welcome to PyRunner</value>
+  </data>
+  <data name="Wizard_Welcome_Text" xml:space="preserve">
+    <value>PyRunner manages and runs your Python scripts with built-in terminals. Let's set up your script folders and Python interpreter — it only takes a minute.</value>
+  </data>
+  <data name="Wizard_Start" xml:space="preserve">
+    <value>Start setup</value>
+  </data>
+  <data name="Wizard_Paths_Title" xml:space="preserve">
+    <value>Choose script folders</value>
+  </data>
+  <data name="Wizard_Paths_Hint" xml:space="preserve">
+    <value>Add one or more folders that contain your .py scripts. All scripts inside (including subfolders) will be imported. You can also skip this step.</value>
+  </data>
+  <data name="Wizard_Paths_Placeholder" xml:space="preserve">
+    <value>Enter a folder path, e.g. C:\Scripts</value>
+  </data>
+  <data name="Wizard_Paths_Add" xml:space="preserve">
+    <value>Add</value>
+  </data>
+  <data name="Wizard_PathInvalid" xml:space="preserve">
+    <value>This folder does not exist. Please check the path.</value>
+  </data>
+  <data name="Wizard_Skip" xml:space="preserve">
+    <value>Skip</value>
+  </data>
+  <data name="Wizard_Next" xml:space="preserve">
+    <value>Next</value>
+  </data>
+  <data name="Wizard_Back" xml:space="preserve">
+    <value>Back</value>
+  </data>
+  <data name="Wizard_Interp_Title" xml:space="preserve">
+    <value>Detect Python interpreters</value>
+  </data>
+  <data name="Wizard_Interp_Hint" xml:space="preserve">
+    <value>Scanning PATH and common install locations. The first interpreter found becomes the default; you can change it later in Settings.</value>
+  </data>
+  <data name="Wizard_Interp_Scanning" xml:space="preserve">
+    <value>Scanning…</value>
+  </data>
+  <data name="Wizard_Interp_Empty" xml:space="preserve">
+    <value>No Python interpreter found. Add one manually, or configure it later in Settings.</value>
+  </data>
+  <data name="Wizard_Interp_Manual" xml:space="preserve">
+    <value>Add manually…</value>
+  </data>
+  <data name="Wizard_Interp_DefaultMark" xml:space="preserve">
+    <value>Default</value>
+  </data>
+  <data name="Wizard_Finish_Title" xml:space="preserve">
+    <value>Setup complete</value>
+  </data>
+  <data name="Wizard_Finish_Text" xml:space="preserve">
+    <value>Imported {0} scripts. Select a script on the left and click Run to start.</value>
+  </data>
+  <data name="Wizard_Finish_None" xml:space="preserve">
+    <value>No scripts were imported. You can register scripts manually from the sidebar at any time.</value>
+  </data>
+  <data name="Wizard_Import_Running" xml:space="preserve">
+    <value>Importing scripts…</value>
+  </data>
+  <data name="Wizard_Enter" xml:space="preserve">
+    <value>Enter PyRunner</value>
+  </data>
+  <data name="Wizard_Brand_Description" xml:space="preserve">
+    <value>Collect, organize, and run local Python scripts with one click and live terminal feedback. Initial setup takes about a minute and every step is optional.</value>
+  </data>
+  <data name="Wizard_FirstUse" xml:space="preserve"><value>First use · Setup guide</value></data>
+  <data name="Wizard_Step_Welcome" xml:space="preserve"><value>Welcome</value></data>
+  <data name="Wizard_Step_Paths" xml:space="preserve"><value>Script folders</value></data>
+  <data name="Wizard_Step_Interpreter" xml:space="preserve"><value>Interpreter</value></data>
+  <data name="Wizard_Step_Complete" xml:space="preserve"><value>Complete</value></data>
+  <data name="Wizard_Welcome_Description" xml:space="preserve"><value>Bring Python scripts from across your PC into one library, then categorize, favorite, search, and run them directly in PyRunner. You only need two things to begin: script folders and an interpreter. Every step can be skipped and completed later in Settings.</value></data>
+  <data name="Wizard_Feature_Library_Title" xml:space="preserve"><value>Script library · Explorer</value></data>
+  <data name="Wizard_Feature_Library_Text" xml:space="preserve"><value>Import every .py file recursively, organize by folder, favorite, and search.</value></data>
+  <data name="Wizard_Feature_Terminal_Title" xml:space="preserve"><value>Built-in terminal</value></data>
+  <data name="Wizard_Feature_Terminal_Text" xml:space="preserve"><value>Run the selected script and see stdout / stderr without switching windows.</value></data>
+  <data name="Wizard_Feature_Interpreter_Title" xml:space="preserve"><value>Plug-and-play interpreters</value></data>
+  <data name="Wizard_Feature_Interpreter_Text" xml:space="preserve"><value>Detect global Python and venv installations and switch interpreters easily.</value></data>
+  <data name="Wizard_Feature_Smooth_Title" xml:space="preserve"><value>Easy to start</value></data>
+  <data name="Wizard_Feature_Smooth_Text" xml:space="preserve"><value>Add folders and interpreters whenever needed, or skip either step.</value></data>
+  <data name="Wizard_Paths_Description" xml:space="preserve"><value>Add one or more folders containing .py files. Every script in those folders and their subfolders is imported automatically. Future file changes can be synchronized with the library.</value></data>
+  <data name="Wizard_Paths_Tip" xml:space="preserve"><value>Tip  Add folders now, or choose Next and configure them later. A folder is not required for basic use.</value></data>
+  <data name="Wizard_AutoRefresh_Title" xml:space="preserve"><value>Refresh the script library at startup</value></data>
+  <data name="Wizard_AutoRefresh_Text" xml:space="preserve"><value>Synchronize the tree when script files are added or removed</value></data>
+  <data name="Wizard_Paths_Count" xml:space="preserve"><value>{0} scripts</value></data>
+  <data name="Wizard_Paths_Remove" xml:space="preserve"><value>Remove folder</value></data>
+  <data name="Wizard_PathAccessError" xml:space="preserve"><value>This folder cannot be accessed. Check its permissions.</value></data>
+  <data name="Wizard_PathDuplicate" xml:space="preserve"><value>This folder has already been added.</value></data>
+  <data name="Wizard_Interp_SelectTitle" xml:space="preserve"><value>Choose the default Python interpreter</value></data>
+  <data name="Wizard_Interp_Description" xml:space="preserve"><value>Scan PATH and common installation folders, including virtual environments. Select the default interpreter used to run scripts. You can change it later in Settings → Python.</value></data>
+  <data name="Wizard_Interp_Tip" xml:space="preserve"><value>No Python installed? PyRunner will try the system PATH, or you can add an executable path later in Settings.</value></data>
+  <data name="Wizard_Interp_Invalid" xml:space="preserve"><value>Select a valid python.exe file.</value></data>
+  <data name="Wizard_Interp_Recommended" xml:space="preserve"><value>Recommended</value></data>
+  <data name="Wizard_Interp_ManualBadge" xml:space="preserve"><value>Manual</value></data>
+  <data name="Wizard_Interp_Venv" xml:space="preserve"><value>venv</value></data>
+  <data name="Wizard_Interp_Global" xml:space="preserve"><value>python (global)</value></data>
+  <data name="Wizard_Complete_Title" xml:space="preserve"><value>PyRunner is ready</value></data>
+  <data name="Wizard_Complete_Text" xml:space="preserve"><value>Your script library and interpreter are ready. You can start your first script now, and adjust any preference later in Settings.</value></data>
+  <data name="Wizard_StartUsing" xml:space="preserve"><value>Start using PyRunner</value></data>
+  <data name="Wizard_Start" xml:space="preserve"><value>Start</value></data>
+  <data name="Wizard_SkipGuide" xml:space="preserve"><value>Skip guide</value></data>
+  <data name="Wizard_SkipStep" xml:space="preserve"><value>Skip this step</value></data>
+  <data name="Wizard_Exit_Title" xml:space="preserve"><value>Exit initial setup?</value></data>
+  <data name="Wizard_Exit_Text" xml:space="preserve"><value>Setup is not complete. Your current choices will not be saved, and this guide will appear again next time.</value></data>
+  <data name="Wizard_ContinueSetup" xml:space="preserve"><value>Continue setup</value></data>
+  <data name="Wizard_ExitProgram" xml:space="preserve"><value>Exit program</value></data>
+  <data name="Wizard_SaveFailed" xml:space="preserve"><value>Initial setup could not be saved. Check the data folder permissions and try again.</value></data>
+  <data name="Wizard_NotConfigured" xml:space="preserve"><value>Not configured</value></data>
+  <data name="Wizard_Paths_Summary" xml:space="preserve"><value>{0} (+{1})</value></data>
+  <data name="Theme_SwitchToLight" xml:space="preserve">
+    <value>Switch to light theme</value>
+  </data>
+  <data name="Theme_SwitchToDark" xml:space="preserve">
+    <value>Switch to dark theme</value>
+  </data>
+  <data name="Nav_Help" xml:space="preserve"><value>Help</value></data>
+  <data name="Help_Title" xml:space="preserve"><value>Help &amp; About</value></data>
+  <data name="Help_Subtitle" xml:space="preserve"><value>User guide, runtime information, and PyRunner version details</value></data>
+  <data name="Help_ProductDescription" xml:space="preserve"><value>Bring scattered scripts into a reliable library — organize, run with one click, and see live terminal feedback.</value></data>
+  <data name="Help_VersionLine" xml:space="preserve"><value>Version {0} · Build {1} · {2} · {3}</value></data>
+  <data name="Help_UnknownVersion" xml:space="preserve"><value>Unknown version</value></data>
+  <data name="Help_ChannelStable" xml:space="preserve"><value>Stable</value></data>
+  <data name="Help_Author" xml:space="preserve"><value>Author</value></data>
+  <data name="Help_AuthorIdentity" xml:space="preserve"><value>Independent developer</value></data>
+  <data name="Help_AuthorBio" xml:space="preserve"><value>Focused on making the small task of running scripts elegant and reliable.</value></data>
+  <data name="Help_SoftwareInfo" xml:space="preserve"><value>Software information</value></data>
+  <data name="Help_RuntimeInfo" xml:space="preserve"><value>Runtime: {0} · {1}</value></data>
+  <data name="Help_PythonInfo" xml:space="preserve"><value>Default interpreter: {0}</value></data>
+  <data name="Help_OsInfo" xml:space="preserve"><value>System: {0}</value></data>
+  <data name="Help_NotConfigured" xml:space="preserve"><value>Not configured</value></data>
+  <data name="Help_QuickHelp" xml:space="preserve"><value>Quick help</value></data>
+  <data name="Help_AddFolder" xml:space="preserve"><value>Add a script folder</value></data>
+  <data name="Help_AddFolderDescription" xml:space="preserve"><value>Open Settings and focus the script folder section.</value></data>
+  <data name="Help_Interpreter" xml:space="preserve"><value>Configure a Python interpreter</value></data>
+  <data name="Help_InterpreterDescription" xml:space="preserve"><value>Open Settings and focus the interpreter section.</value></data>
+  <data name="Help_RunGuide" xml:space="preserve"><value>Run a script</value></data>
+  <data name="Help_RunGuideDescription" xml:space="preserve"><value>Learn how selection, terminal tabs, and stopping work.</value></data>
+  <data name="Help_RunGuideBody" xml:space="preserve"><value>Select a .py file in the script library, then choose Run or press F5. Each running script opens in its own terminal tab. To stop the selected running script, choose Stop or press Shift+F5.</value></data>
+  <data name="Help_Faq" xml:space="preserve"><value>FAQ</value></data>
+  <data name="Help_FaqDescription" xml:space="preserve"><value>Review common directory, interpreter, and terminal issues.</value></data>
+  <data name="Help_FaqBody" xml:space="preserve"><value>Scripts missing? Confirm their parent folder is listed in Settings, then refresh the library. Unable to run? Add a valid python.exe and set it as the default interpreter. Garbled output? Ensure the script and terminal output use UTF-8.</value></data>
+  <data name="Help_CopyInfo" xml:space="preserve"><value>Copy software info</value></data>
+  <data name="Help_Copied" xml:space="preserve"><value>Copied</value></data>
+  <data name="Help_CopyFailed" xml:space="preserve"><value>Copy failed</value></data>
+  <data name="Help_TerminalInfo" xml:space="preserve"><value>Terminal: WebView2 {0} · {1}</value></data>
+  <data name="Help_LicenseInfo" xml:space="preserve"><value>License: {0}</value></data>
+  <data name="Help_UpdateChannelInfo" xml:space="preserve"><value>Update channel: {0}</value></data>
+  <data name="Help_CheckUpdates" xml:space="preserve"><value>Check for updates</value></data>
+  <data name="Help_CheckingUpdates" xml:space="preserve"><value>Checking…</value></data>
+  <data name="Help_UpdateLatest" xml:space="preserve"><value>PyRunner is up to date.</value></data>
+  <data name="Help_UpdateAvailable" xml:space="preserve"><value>Version {0} is available.</value></data>
+  <data name="Help_UpdateNoPublishedRelease" xml:space="preserve"><value>No published stable release is available yet.</value></data>
+  <data name="Help_UpdateRateLimited" xml:space="preserve"><value>GitHub API rate limit reached. Try again later.</value></data>
+  <data name="Help_UpdateRateLimitedUntil" xml:space="preserve"><value>GitHub API rate limit reached. Try again after {0}.</value></data>
+  <data name="Help_UpdateOffline" xml:space="preserve"><value>Unable to check while offline.</value></data>
+  <data name="Help_UpdateTimeout" xml:space="preserve"><value>The update check timed out. Try again later.</value></data>
+  <data name="Help_UpdateInvalidReleaseData" xml:space="preserve"><value>The latest Release data is incomplete or invalid.</value></data>
+  <data name="Help_UpdateFailed" xml:space="preserve"><value>Unable to check for updates right now.</value></data>
+  <data name="Help_UpdateError" xml:space="preserve"><value>Unable to check for updates right now.</value></data>
+  <data name="Help_UpdateVersion" xml:space="preserve"><value>Version: {0}</value></data>
+  <data name="Help_UpdatePublished" xml:space="preserve"><value>Published: {0}</value></data>
+  <data name="Help_UpdateNotesTitle" xml:space="preserve"><value>Release notes</value></data>
+  <data name="Help_UpdateNotesEmpty" xml:space="preserve"><value>No release notes were provided.</value></data>
+  <data name="Help_GoToDownload" xml:space="preserve"><value>Go to download</value></data>
+  <data name="Help_LinkOpenFailed" xml:space="preserve"><value>Unable to open this link.</value></data>
+  <data name="Help_ProjectHomepage" xml:space="preserve"><value>Project homepage</value></data>
+  <data name="Help_IssueTracker" xml:space="preserve"><value>Report an issue</value></data>
+  <data name="Help_ReleasesPage" xml:space="preserve"><value>Releases</value></data>
+  <data name="Help_AuthorHomepage" xml:space="preserve"><value>Author homepage</value></data>
+  <data name="Help_LicensePage" xml:space="preserve"><value>License</value></data>
+  <data name="Help_OnlineResourcesUnavailable" xml:space="preserve"><value>Online resources and update checking are unavailable until release URLs are configured.</value></data>
+  <data name="Help_Copyright" xml:space="preserve"><value>© {0} PyRunner</value></data>
+</root>

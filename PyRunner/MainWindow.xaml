@@ -1,0 +1,583 @@
+﻿<Window
+    x:Class="PyRunner.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:views="using:PyRunner.Views">
+
+    <!-- 注：本窗口 Window.Resources 内不能放任何 Style（带键/隐式均会使 WinUI3 XamlCompiler 静默崩溃），
+         thumb 样式需求改用本地属性（Padding=0）实现 -->
+
+    <!-- index.html 原型三区骨架：标题栏(46) | 12px 卡片内容区 | 状态栏(34)。 -->
+    <Grid x:Name="RootLayout" Background="{ThemeResource AppMicaGradientBrush}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="46" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="34" />
+        </Grid.RowDefinitions>
+
+        <!-- 自绘标题栏：品牌、脚本/运行/设置导航、主题切换。右侧保留系统 caption 按钮。 -->
+        <Grid
+            x:Name="TitleBarArea"
+            Grid.Row="0"
+            Background="Transparent">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="138" />
+            </Grid.ColumnDefinitions>
+            <StackPanel
+                Grid.Column="0"
+                Orientation="Horizontal"
+                Spacing="12"
+                Margin="16,0,20,0"
+                VerticalAlignment="Center"
+                HorizontalAlignment="Left"
+                IsHitTestVisible="False">
+                <ContentControl
+                    ContentTemplate="{StaticResource Icon_Logo}"
+                    Width="26" Height="26"
+                    IsTabStop="False" />
+                <TextBlock
+                    x:Name="AppNameText"
+                    Text="{x:Bind AppName, Mode=OneWay}"
+                    FontSize="{ThemeResource FontSizeBody}"
+                    FontWeight="SemiBold"
+                    Foreground="{ThemeResource TextPrimaryBrush}"
+                    VerticalAlignment="Center" />
+            </StackPanel>
+
+            <StackPanel
+                Grid.Column="1"
+                Orientation="Horizontal"
+                Spacing="4"
+                VerticalAlignment="Center"
+                HorizontalAlignment="Left">
+                <Button
+                    x:Name="NavScriptsButton"
+                    AutomationProperties.AutomationId="NavScriptsButton"
+                    Content="{x:Bind NavScriptsText, Mode=OneWay}"
+                    MinWidth="56" MinHeight="30"
+                    Padding="14,5"
+                    FontSize="12"
+                    Template="{StaticResource PyRunnerButtonTemplate}"
+                    Background="{ThemeResource GhostButtonHoverBrush}"
+                    Foreground="{ThemeResource TextPrimaryBrush}"
+                    BorderBrush="Transparent"
+                    PointerEntered="OnNavButtonPointerEntered"
+                    PointerPressed="OnNavButtonPointerPressed"
+                    PointerReleased="OnNavButtonPointerReleased"
+                    PointerExited="OnNavButtonPointerExited"
+                    Click="OnNavScriptsClick" />
+                <Button
+                    x:Name="NavRunsButton"
+                    AutomationProperties.AutomationId="NavRunsButton"
+                    Content="{x:Bind NavRunsText, Mode=OneWay}"
+                    MinWidth="56" MinHeight="30"
+                    Padding="14,5"
+                    FontSize="12"
+                    Template="{StaticResource PyRunnerButtonTemplate}"
+                    Background="Transparent"
+                    Foreground="{ThemeResource TextSecondaryBrush}"
+                    BorderBrush="Transparent"
+                    PointerEntered="OnNavButtonPointerEntered"
+                    PointerPressed="OnNavButtonPointerPressed"
+                    PointerReleased="OnNavButtonPointerReleased"
+                    PointerExited="OnNavButtonPointerExited"
+                    Click="OnNavRunsClick" />
+                <Button
+                    x:Name="SettingsButton"
+                    AutomationProperties.AutomationId="TitleBarSettingsButton"
+                    Content="{x:Bind NavSettingsText, Mode=OneWay}"
+                    MinWidth="56" MinHeight="30"
+                    Padding="14,5"
+                    FontSize="12"
+                    Template="{StaticResource PyRunnerButtonTemplate}"
+                    Background="Transparent"
+                    Foreground="{ThemeResource TextSecondaryBrush}"
+                    BorderBrush="Transparent"
+                    PointerEntered="OnNavButtonPointerEntered"
+                    PointerPressed="OnNavButtonPointerPressed"
+                    PointerReleased="OnNavButtonPointerReleased"
+                    PointerExited="OnNavButtonPointerExited"
+                    Click="OnSettingsClick" />
+                <Button
+                    x:Name="NavHelpButton"
+                    AutomationProperties.AutomationId="NavHelpButton"
+                    Content="{x:Bind NavHelpText, Mode=OneWay}"
+                    MinWidth="56" MinHeight="30"
+                    Padding="14,5"
+                    FontSize="12"
+                    Template="{StaticResource PyRunnerButtonTemplate}"
+                    Background="Transparent"
+                    Foreground="{ThemeResource TextSecondaryBrush}"
+                    BorderBrush="Transparent"
+                    PointerEntered="OnNavButtonPointerEntered"
+                    PointerPressed="OnNavButtonPointerPressed"
+                    PointerReleased="OnNavButtonPointerReleased"
+                    PointerExited="OnNavButtonPointerExited"
+                    Click="OnNavHelpClick" />
+            </StackPanel>
+
+            <!-- 只把中间空白区交给系统作为窗口拖动区。导航和主题按钮必须位于
+                 拖动区之外，否则 UIA 可调用但真实鼠标会被非客户区吞掉。 -->
+            <Grid
+                x:Name="TitleBarDragRegion"
+                Grid.Column="2"
+                Background="Transparent" />
+
+            <Button
+                x:Name="ThemeButton"
+                AutomationProperties.AutomationId="TitleBarThemeButton"
+                AutomationProperties.Name="{x:Bind ThemeToggleText, Mode=OneWay}"
+                ToolTipService.ToolTip="{x:Bind ThemeToggleText, Mode=OneWay}"
+                Grid.Column="3"
+                VerticalAlignment="Center"
+                Margin="6,0,8,0"
+                Width="42" MinWidth="42" Height="30" MinHeight="30"
+                Padding="6,3"
+                Template="{StaticResource PyRunnerButtonTemplate}"
+                Background="Transparent"
+                BorderBrush="{ThemeResource SecondaryButtonBorderBrush}"
+                PointerEntered="OnThemeButtonPointerEntered"
+                PointerPressed="OnThemeButtonPointerPressed"
+                PointerReleased="OnThemeButtonPointerReleased"
+                PointerExited="OnThemeButtonPointerExited"
+                Click="OnThemeToggleClick">
+                <FontIcon
+                    FontFamily="Segoe Fluent Icons"
+                    FontSize="14"
+                    Glyph="{x:Bind ThemeToggleGlyph, Mode=OneWay}" />
+            </Button>
+        </Grid>
+
+        <!-- 内容区：左侧资源管理器卡片 + 右侧脚本/终端卡片。 -->
+        <Grid Grid.Row="1" Margin="12,0,12,12" ColumnSpacing="12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition x:Name="SidebarColumn" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <Border
+                Grid.Column="0"
+                Background="{ThemeResource SidebarSurfaceBrush}"
+                BorderBrush="{ThemeResource BorderSubtleBrush}"
+                BorderThickness="1"
+                CornerRadius="10">
+                <views:SidebarView x:Name="Sidebar" />
+            </Border>
+
+            <!-- 侧栏右缘拖拽区：180~500 DIP，松手持久化。 -->
+            <Button
+                x:Name="SidebarResizeThumb"
+                AutomationProperties.AutomationId="SidebarResizeThumb"
+                Grid.Column="0"
+                Width="5"
+                HorizontalAlignment="Right"
+                Margin="0,0,-2,0"
+                Padding="0"
+                Background="Transparent"
+                IsTabStop="False"
+                PointerPressed="OnThumbPointerPressed"
+                PointerMoved="OnThumbPointerMoved"
+                PointerReleased="OnThumbPointerReleased"
+                PointerCanceled="OnThumbPointerReleased" />
+
+            <Border
+                Grid.Column="1"
+                Background="{ThemeResource MainSurfaceBrush}"
+                BorderBrush="{ThemeResource BorderSubtleBrush}"
+                BorderThickness="1"
+                CornerRadius="10">
+                <Grid>
+                    <Grid x:Name="WorkArea">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="76" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+
+                    <!-- 脚本信息栏：选择、运行状态和四个主操作都在这里。 -->
+                    <Grid Padding="20,16" BorderBrush="{ThemeResource BorderSubtleBrush}" BorderThickness="0,0,0,1">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Border
+                            Width="44" Height="44"
+                            Padding="8"
+                            Background="{ThemeResource GhostButtonHoverBrush}"
+                            CornerRadius="11">
+                            <ContentControl ContentTemplate="{StaticResource Icon_ScriptPy}" IsTabStop="False" />
+                        </Border>
+                        <StackPanel Grid.Column="1" Margin="16,0,20,0" Spacing="2" VerticalAlignment="Center">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <TextBlock
+                                    x:Name="SelectedScriptNameText"
+                                    AutomationProperties.AutomationId="SelectedScriptName"
+                                    Text=""
+                                    FontSize="{ThemeResource FontSizeH2}"
+                                    FontWeight="SemiBold"
+                                    Foreground="{ThemeResource TextPrimaryBrush}"
+                                    TextTrimming="CharacterEllipsis"
+                                    VerticalAlignment="Center" />
+                                <Border
+                                    x:Name="StatusBadgeBorder"
+                                    Padding="11,3"
+                                    Background="{ThemeResource ControlSurfaceBrush}"
+                                    CornerRadius="20">
+                                    <TextBlock
+                                        x:Name="StatusBadgeText"
+                                        AutomationProperties.AutomationId="SelectedScriptStatus"
+                                        Text=""
+                                        FontSize="{ThemeResource FontSizeOverline}"
+                                        Foreground="{ThemeResource TextMutedBrush}" />
+                                </Border>
+                            </StackPanel>
+                            <TextBlock
+                                x:Name="SelectedScriptMetadataText"
+                                AutomationProperties.AutomationId="SelectedScriptMetadata"
+                                Text=""
+                                FontSize="{ThemeResource FontSizeCaption}"
+                                Foreground="{ThemeResource TextMutedBrush}"
+                                TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                            <Button
+                                x:Name="RunButton"
+                                AutomationProperties.AutomationId="RunButton"
+                                ToolTipService.ToolTip="F5"
+                                MinWidth="80" Height="36" MinHeight="36"
+                                Padding="18,8"
+                                FontSize="12.5"
+                                Template="{StaticResource PyRunnerButtonTemplate}"
+                                Background="{ThemeResource AccentBrush}"
+                                Foreground="{ThemeResource PrimaryButtonForegroundBrush}"
+                                BorderBrush="{ThemeResource SelectedBorderBrush}"
+                                IsEnabled="{x:Bind ViewModel.CanRun, Mode=OneWay}"
+                                PointerEntered="OnRunButtonPointerEntered"
+                                PointerPressed="OnRunButtonPointerPressed"
+                                PointerReleased="OnRunButtonPointerReleased"
+                                PointerExited="OnRunButtonPointerExited"
+                                Click="OnRunClick">
+                                <Button.KeyboardAccelerators>
+                                    <KeyboardAccelerator Key="R" Modifiers="Control" />
+                                    <KeyboardAccelerator Key="F5" />
+                                </Button.KeyboardAccelerators>
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <ContentControl ContentTemplate="{StaticResource Icon_Run}" Width="15" Height="15" IsTabStop="False" />
+                                    <TextBlock Text="{x:Bind ViewModel.RunText, Mode=OneWay}" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+                            <Button
+                                x:Name="StopButton"
+                                AutomationProperties.AutomationId="StopButton"
+                                ToolTipService.ToolTip="Shift+F5"
+                                MinWidth="80" Height="36" MinHeight="36"
+                                Padding="18,8"
+                                FontSize="12.5"
+                                Template="{StaticResource PyRunnerButtonTemplate}"
+                                Foreground="{ThemeResource StatusErrorBrush}"
+                                Background="{ThemeResource DisabledButtonBrush}"
+                                BorderBrush="{ThemeResource SecondaryButtonBorderBrush}"
+                                IsEnabled="{x:Bind ViewModel.CanStop, Mode=OneWay}"
+                                PointerEntered="OnStopButtonPointerEntered"
+                                PointerPressed="OnStopButtonPointerPressed"
+                                PointerReleased="OnStopButtonPointerReleased"
+                                PointerExited="OnStopButtonPointerExited"
+                                Click="OnStopClick">
+                                <Button.KeyboardAccelerators>
+                                    <KeyboardAccelerator Key="S" Modifiers="Control" />
+                                    <KeyboardAccelerator Key="F5" Modifiers="Shift" />
+                                </Button.KeyboardAccelerators>
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <ContentControl ContentTemplate="{StaticResource Icon_Stop}" Width="15" Height="15" IsTabStop="False" />
+                                    <TextBlock Text="{x:Bind ViewModel.StopText, Mode=OneWay}" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+                            <Button
+                                x:Name="EditButton"
+                                AutomationProperties.AutomationId="EditButton"
+                                ToolTipService.ToolTip="Ctrl+E"
+                                MinWidth="80" Height="36" MinHeight="36"
+                                Padding="18,8"
+                                FontSize="12.5"
+                                Template="{StaticResource PyRunnerButtonTemplate}"
+                                IsEnabled="False"
+                                Foreground="{ThemeResource SecondaryButtonForegroundBrush}"
+                                Background="{ThemeResource SecondaryButtonBrush}"
+                                BorderBrush="{ThemeResource SecondaryButtonBorderBrush}"
+                                PointerEntered="OnSecondaryButtonPointerEntered"
+                                PointerPressed="OnSecondaryButtonPointerPressed"
+                                PointerReleased="OnSecondaryButtonPointerReleased"
+                                PointerExited="OnSecondaryButtonPointerExited"
+                                Click="OnEditClick">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <ContentControl ContentTemplate="{StaticResource Icon_Edit}" Width="15" Height="15" IsTabStop="False" />
+                                    <TextBlock Text="{x:Bind EditText, Mode=OneWay}" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- 脚本页：独立多标签终端，历史不再常驻挤占空间。 -->
+                    <Grid x:Name="ScriptsPage" Grid.Row="1" Background="{ThemeResource TerminalBackgroundBrush}">
+                        <TabView
+                            x:Name="Tabs"
+                            AutomationProperties.AutomationId="WorkspaceTabs"
+                            IsAddTabButtonVisible="False"
+                            HorizontalAlignment="Stretch"
+                            VerticalAlignment="Stretch"
+                            Background="{ThemeResource TerminalBackgroundBrush}"
+                            TabCloseRequested="OnTabCloseRequested"
+                            SelectionChanged="OnTabSelectionChanged">
+                            <TabView.TabStripHeader>
+                                <Border
+                                    x:Name="IdleTerminalTab"
+                                    Margin="12,4,0,4"
+                                    Height="32"
+                                    Padding="14,5"
+                                    Background="{ThemeResource GhostButtonHoverBrush}"
+                                    CornerRadius="6">
+                                    <StackPanel Orientation="Horizontal" Spacing="7">
+                                        <Ellipse Width="8" Height="8" Fill="{ThemeResource AccentBrush}" VerticalAlignment="Center" />
+                                        <TextBlock
+                                            x:Name="TerminalTabText"
+                                            Text=""
+                                            FontSize="12"
+                                            Foreground="{ThemeResource TextBodyBrush}"
+                                            VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </Border>
+                            </TabView.TabStripHeader>
+                            <TabView.TabStripFooter>
+                                <TextBlock
+                                    x:Name="TerminalCommandText"
+                                    AutomationProperties.AutomationId="TerminalCommandPreview"
+                                    Text=""
+                                    MinWidth="320"
+                                    Margin="16,0,20,0"
+                                    FontFamily="{ThemeResource TerminalFontFamily}"
+                                    FontSize="{ThemeResource FontSizeOverline}"
+                                    Foreground="{ThemeResource TextDisabledBrush}"
+                                    TextAlignment="Right"
+                                    TextTrimming="CharacterEllipsis"
+                                    VerticalAlignment="Center" />
+                            </TabView.TabStripFooter>
+                        </TabView>
+                        <views:EmptyStateView
+                            x:Name="WorkspaceHint"
+                            IconTemplate="{StaticResource Icon_Terminal}"
+                            Description="{x:Bind ViewModel.WorkspaceHintText, Mode=OneWay}"
+                            ShowButton="False"
+                            IsHitTestVisible="False" />
+                    </Grid>
+
+                    <!-- “运行”导航页：当前脚本最近十次记录，点击可查看完整输出。 -->
+                    <Grid
+                        x:Name="RunsPage"
+                        Grid.Row="1"
+                        Visibility="Collapsed"
+                        Background="{ThemeResource PanelSurfaceBrush}">
+                        <Grid.Resources>
+                            <views:RunStatusToBrushConverter x:Key="HistoryStatusToBrush" />
+                            <views:BoolToVisibilityConverter x:Key="HistoryBoolToVisibility" />
+                        </Grid.Resources>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="58" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+                        <Grid Padding="22,0" BorderBrush="{ThemeResource BorderSubtleBrush}" BorderThickness="0,0,0,1">
+                            <TextBlock
+                                Text="{x:Bind RunsTitleText, Mode=OneWay}"
+                                FontSize="{ThemeResource FontSizeH3}"
+                                FontWeight="SemiBold"
+                                Foreground="{ThemeResource TextTitleBrush}"
+                                VerticalAlignment="Center" />
+                        </Grid>
+                        <Grid x:Name="HistoryPanel" Grid.Row="1" Margin="10">
+                            <ListView
+                                x:Name="HistoryList"
+                                AutomationProperties.AutomationId="HistoryList"
+                                ItemsSource="{Binding Records}"
+                                SelectionMode="None"
+                                IsItemClickEnabled="True"
+                                ItemClick="OnHistoryItemClick">
+                                <ListView.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border
+                                            Margin="6,4"
+                                            Padding="16,12"
+                                            Background="{ThemeResource PanelSurfaceRaisedBrush}"
+                                            CornerRadius="8">
+                                            <Grid ColumnSpacing="16">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="140" />
+                                                    <ColumnDefinition Width="80" />
+                                                    <ColumnDefinition Width="90" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Text="{Binding TimeText}" FontFamily="{ThemeResource TerminalFontFamily}" Foreground="{ThemeResource TextSecondaryBrush}" VerticalAlignment="Center" />
+                                                <TextBlock Grid.Column="1" Text="{Binding StatusText}" Foreground="{Binding Status, Converter={StaticResource HistoryStatusToBrush}}" VerticalAlignment="Center" />
+                                                <TextBlock Grid.Column="2" Text="{Binding ExitCodeText}" FontFamily="{ThemeResource TerminalFontFamily}" Foreground="{ThemeResource TextMutedBrush}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                                <TextBlock Grid.Column="3" Text="{Binding Summary}" ToolTipService.ToolTip="{Binding Summary}" Foreground="{ThemeResource TextMutedBrush}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" MaxLines="1" VerticalAlignment="Center" />
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ListView.ItemTemplate>
+                            </ListView>
+                            <views:EmptyStateView
+                                x:Name="HistoryEmpty"
+                                IconTemplate="{StaticResource Icon_Clock}"
+                                Description="{Binding EmptyText}"
+                                ShowButton="False"
+                                IsHitTestVisible="False"
+                                Visibility="{Binding ShowEmptyState, Converter={StaticResource HistoryBoolToVisibility}}" />
+                        </Grid>
+                    </Grid>
+                </Grid>
+                <Frame
+                    x:Name="HelpPageHost"
+                    AutomationProperties.AutomationId="HelpPageHost"
+                    HorizontalContentAlignment="Stretch"
+                    VerticalContentAlignment="Stretch"
+                    IsNavigationStackEnabled="False"
+                    Visibility="Collapsed" />
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- 底部状态栏：左侧全局状态，右侧最近结果/时间与当前工作目录。 -->
+        <Grid Grid.Row="2" Background="{ThemeResource StatusBarSurfaceBrush}" Padding="20,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                <Ellipse x:Name="GlobalStatusDot" Width="8" Height="8" Fill="{ThemeResource AccentBrush}" />
+                <TextBlock
+                    Text="{x:Bind ViewModel.Status, Mode=OneWay}"
+                    FontSize="11"
+                    Foreground="{ThemeResource TextMutedBrush}"
+                    TextTrimming="CharacterEllipsis" />
+            </StackPanel>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                <TextBlock
+                    x:Name="LastRunResultText"
+                    Text=""
+                    FontFamily="{ThemeResource TerminalFontFamily}"
+                    FontSize="11"
+                    Foreground="{ThemeResource TextMutedBrush}"
+                    VerticalAlignment="Center" />
+                <TextBlock
+                    x:Name="LastRunTimeSeparatorText"
+                    Text="·"
+                    FontSize="11"
+                    Foreground="{ThemeResource TextDisabledBrush}"
+                    Visibility="Collapsed"
+                    VerticalAlignment="Center" />
+                <TextBlock
+                    x:Name="LastRunTimeText"
+                    Text=""
+                    FontFamily="{ThemeResource TerminalFontFamily}"
+                    FontSize="11"
+                    Foreground="{ThemeResource TextMutedBrush}"
+                    Visibility="Collapsed"
+                    VerticalAlignment="Center" />
+                <TextBlock
+                    Text="·"
+                    FontSize="11"
+                    Foreground="{ThemeResource TextDisabledBrush}"
+                    VerticalAlignment="Center" />
+                <TextBlock
+                    x:Name="StatusWorkingDirectoryText"
+                    Text=""
+                    MaxWidth="420"
+                    FontFamily="{ThemeResource TerminalFontFamily}"
+                    FontSize="11"
+                    Foreground="{ThemeResource TextMutedBrush}"
+                    TextTrimming="CharacterEllipsis"
+                    VerticalAlignment="Center" />
+            </StackPanel>
+            <Button
+                AutomationProperties.AutomationId="StatusMirror"
+                AutomationProperties.Name="{x:Bind ViewModel.Status, Mode=OneWay}"
+                Width="0"
+                Height="0"
+                Padding="0"
+                BorderThickness="0"
+                IsTabStop="False"
+                IsHitTestVisible="False"
+                Opacity="0" />
+        </Grid>
+
+        <!-- 快捷键承载簇（Phase E 交付 16 / 补充文档 §五）：零尺寸不可见按钮仅承载
+             KeyboardAccelerator（无对应可视按钮的快捷键）；AutomationId 暴露供 UIA 冒烟。
+             WinUI 加速器与焦点无关，文本编辑态误触发由代码后置过滤（Delete/Escape 等）。
+             终端复制/粘贴由 xterm 在 WebView 内捕获，避免同一按键被 WinUI 重复处理。
+             F2 重命名为二期留痕，不在本簇。 -->
+        <StackPanel x:Name="ShortcutClusterProbe" Grid.Row="2" Width="0" Height="0">
+            <Button
+                x:Name="ShortcutRerunButton"
+                AutomationProperties.AutomationId="ShortcutRerun"
+                Width="0" Height="0" Padding="0" BorderThickness="0"
+                IsTabStop="False" IsHitTestVisible="False" Opacity="0"
+                Click="OnShortcutRerun">
+                <Button.KeyboardAccelerators>
+                    <KeyboardAccelerator Key="R" Modifiers="Control,Shift" />
+                </Button.KeyboardAccelerators>
+            </Button>
+            <Button
+                x:Name="ShortcutEditButton"
+                AutomationProperties.AutomationId="ShortcutEdit"
+                Width="0" Height="0" Padding="0" BorderThickness="0"
+                IsTabStop="False" IsHitTestVisible="False" Opacity="0"
+                Click="OnShortcutEdit">
+                <Button.KeyboardAccelerators>
+                    <KeyboardAccelerator Key="E" Modifiers="Control" />
+                </Button.KeyboardAccelerators>
+            </Button>
+            <Button
+                x:Name="ShortcutDeleteButton"
+                AutomationProperties.AutomationId="ShortcutDelete"
+                Width="0" Height="0" Padding="0" BorderThickness="0"
+                IsTabStop="False" IsHitTestVisible="False" Opacity="0"
+                Click="OnShortcutDelete">
+                <Button.KeyboardAccelerators>
+                    <KeyboardAccelerator Key="Delete" />
+                </Button.KeyboardAccelerators>
+            </Button>
+            <Button
+                x:Name="ShortcutSearchButton"
+                AutomationProperties.AutomationId="ShortcutSearch"
+                Width="0" Height="0" Padding="0" BorderThickness="0"
+                IsTabStop="False" IsHitTestVisible="False" Opacity="0"
+                Click="OnShortcutFocusSearch">
+                <Button.KeyboardAccelerators>
+                    <KeyboardAccelerator Key="F" Modifiers="Control" />
+                </Button.KeyboardAccelerators>
+            </Button>
+            <Button
+                x:Name="ShortcutNextTabButton"
+                AutomationProperties.AutomationId="ShortcutNextTab"
+                Width="0" Height="0" Padding="0" BorderThickness="0"
+                IsTabStop="False" IsHitTestVisible="False" Opacity="0"
+                Click="OnShortcutNextTab">
+                <Button.KeyboardAccelerators>
+                    <KeyboardAccelerator Key="Tab" Modifiers="Control" />
+                </Button.KeyboardAccelerators>
+            </Button>
+            <Button
+                x:Name="ShortcutEscapeButton"
+                AutomationProperties.AutomationId="ShortcutEscape"
+                Width="0" Height="0" Padding="0" BorderThickness="0"
+                IsTabStop="False" IsHitTestVisible="False" Opacity="0"
+                Click="OnShortcutEscape">
+                <Button.KeyboardAccelerators>
+                    <KeyboardAccelerator Key="Escape" />
+                </Button.KeyboardAccelerators>
+            </Button>
+        </StackPanel>
+    </Grid>
+</Window>

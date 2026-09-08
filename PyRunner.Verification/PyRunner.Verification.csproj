@@ -1,0 +1,53 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <Platforms>x64</Platforms>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="..\PyRunner\Services\PythonCommandLine.cs" Link="Services\PythonCommandLine.cs" />
+    <Compile Include="..\PyRunner\Data\SqliteConnectionFactory.cs" Link="Data\SqliteConnectionFactory.cs" />
+    <Compile Include="..\PyRunner\Data\DatabaseRecoveryService.cs" Link="Data\DatabaseRecoveryService.cs" />
+    <Compile Include="..\PyRunner\Data\SchemaMigrator.cs" Link="Data\SchemaMigrator.cs" />
+    <Compile Include="..\PyRunner\Models\Enums.cs" Link="Models\Enums.cs" />
+    <Compile Include="..\PyRunner\Models\Interpreter.cs" Link="Models\Interpreter.cs" />
+    <Compile Include="..\PyRunner\Models\RunRecord.cs" Link="Models\RunRecord.cs" />
+    <Compile Include="..\PyRunner\Models\Script.cs" Link="Models\Script.cs" />
+    <Compile Include="..\PyRunner\Models\ScriptPath.cs" Link="Models\ScriptPath.cs" />
+    <Compile Include="..\PyRunner\Services\IInterpreterService.cs" Link="Services\IInterpreterService.cs" />
+    <Compile Include="..\PyRunner\Services\IScriptService.cs" Link="Services\IScriptService.cs" />
+    <Compile Include="..\PyRunner\Services\InterpreterService.cs" Link="Services\InterpreterService.cs" />
+    <Compile Include="..\PyRunner\Services\PythonDiscovery.cs" Link="Services\PythonDiscovery.cs" />
+    <Compile Include="..\PyRunner\Services\RunRecordService.cs" Link="Services\RunRecordService.cs" />
+    <Compile Include="..\PyRunner\Services\ScriptDirectoryPolicy.cs" Link="Services\ScriptDirectoryPolicy.cs" />
+    <Compile Include="..\PyRunner\Services\ScriptPathService.cs" Link="Services\ScriptPathService.cs" />
+    <Compile Include="..\PyRunner\Services\ScriptService.cs" Link="Services\ScriptService.cs" />
+    <Compile Include="..\PyRunner\Services\ValidationException.cs" Link="Services\ValidationException.cs" />
+    <Compile Include="..\PyRunner\Terminal\ConPtyNative.cs" Link="Terminal\ConPtyNative.cs" />
+    <Compile Include="..\PyRunner\Terminal\PtySession.cs" Link="Terminal\PtySession.cs" />
+    <Compile Include="..\PyRunner\DebugLog.cs" Link="DebugLog.cs" />
+    <Compile Include="..\PyRunner\Models\HelpSettingsSection.cs" Link="Models\HelpSettingsSection.cs" />
+    <Compile Include="..\PyRunner\Models\UpdateCheckModels.cs" Link="Models\UpdateCheckModels.cs" />
+    <Compile Include="..\PyRunner\Models\AppSettings.cs" Link="Models\AppSettings.cs" />
+    <Compile Include="..\PyRunner\Services\ISettingsService.cs" Link="Services\ISettingsService.cs" />
+    <Compile Include="..\PyRunner\Services\JsonSettingsService.cs" Link="Services\JsonSettingsService.cs" />
+    <Compile Include="..\PyRunner\Services\SettingsUpdateCacheStore.cs" Link="Services\SettingsUpdateCacheStore.cs" />
+    <Compile Include="..\PyRunner\Services\IUiDispatcher.cs" Link="Services\IUiDispatcher.cs" />
+    <Compile Include="..\PyRunner\Services\ProductVersionParser.cs" Link="Services\ProductVersionParser.cs" />
+    <Compile Include="..\PyRunner\Services\IUpdateService.cs" Link="Services\IUpdateService.cs" />
+    <Compile Include="..\PyRunner\Services\UpdateStateStore.cs" Link="Services\UpdateStateStore.cs" />
+    <Compile Include="..\PyRunner\Services\UpdateCheckCoordinator.cs" Link="Services\UpdateCheckCoordinator.cs" />
+    <Compile Include="..\PyRunner\Services\GitHubUpdateService.cs" Link="Services\GitHubUpdateService.cs" />
+    <Compile Include="..\PyRunner\ViewModels\HelpAboutViewModel.cs" Link="ViewModels\HelpAboutViewModel.cs" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.*" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.30" />
+    <PackageReference Include="Dapper" Version="2.1.66" />
+    <ProjectReference Include="..\PyRunner.TerminalProbe\PyRunner.TerminalProbe.csproj"
+                      ReferenceOutputAssembly="false" />
+    <EmbeddedResource Include="..\PyRunner\Data\Migrations\001_initial.sql"
+                      Link="Data\Migrations\001_initial.sql"
+                      LogicalName="PyRunner.Data.Migrations.001_initial.sql" />
+  </ItemGroup>
+</Project>

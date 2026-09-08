@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PyRunner Terminal</title>
+    <link rel="stylesheet" href="xterm.css" />
+    <script>
+        const initialTheme = new URLSearchParams(window.location.search).get('theme') === 'light' ? 'light' : 'dark';
+        document.documentElement.dataset.theme = initialTheme;
+    </script>
+    <style>
+        :root {
+            --terminal-background: #0c0e11;
+            color-scheme: dark;
+        }
+
+        :root[data-theme="light"] {
+            --terminal-background: #f7f9fb;
+            color-scheme: light;
+        }
+
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--terminal-background);
+            overflow: hidden;
+        }
+
+        #terminal {
+            width: 100%;
+            height: 100%;
+            padding: 18px 22px;
+            box-sizing: border-box;
+        }
+
+        /* xterm 的滚动仍由鼠标滚轮/键盘保留，隐藏 Chromium 默认的白色滚动条。 */
+        .xterm-viewport {
+            scrollbar-width: none;
+        }
+
+        .xterm-viewport::-webkit-scrollbar {
+            width: 0;
+            height: 0;
+        }
+    </style>
+</head>
+<body>
+    <div id="terminal"></div>
+    <script src="xterm.js"></script>
+    <script src="xterm-addon-fit.js"></script>
+    <script src="terminal.js"></script>
+</body>
+</html>

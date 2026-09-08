@@ -1,0 +1,243 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- ==== PyRunner 图标库（真相源：icons\*.svg + icons\使用指南.md） ====
+         集成方式：仅「Path 内联」（指南方式 C），禁止运行时读取 SVG 文件。
+         每个图标为一个 DataTemplate（Viewbox + Canvas，viewBox 64×64，Logo 120×120），
+         颜色全部绑定 DarkTheme.xaml 的 ThemeResource Token，可随主题联动。
+         Logo 采用 Path 内联替代多尺寸 PNG（SVG→PNG 转换工具链本机不可用）。 -->
+
+    <!-- app-logo.svg：渐变圆角底 + 白色蛇形描边 + 双眼点 -->
+    <DataTemplate x:Key="Icon_Logo">
+        <Viewbox>
+            <Canvas Width="120" Height="120">
+                <Rectangle Width="120" Height="120"
+                           RadiusX="24" RadiusY="24" Fill="{ThemeResource LogoGradientBrush}" />
+                <Path Stroke="White" StrokeThickness="5" Fill="Transparent"
+                      StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                      StrokeLineJoin="Round"
+                      Data="M42 38 C42 30,50 26,60 26 C70 26,78 30,78 38 L78 48 C78 52,74 56,68 56 L52 56 C46 56,42 60,42 64 L42 74 C42 82,50 86,60 86 C70 86,78 82,78 74" />
+                <Ellipse Width="6" Height="6" Canvas.Left="49" Canvas.Top="35" Fill="White" />
+                <Ellipse Width="6" Height="6" Canvas.Left="65" Canvas.Top="71" Fill="White" />
+                <TextBlock Text=">_" Canvas.Left="50" Canvas.Top="49"
+                           FontFamily="Consolas" FontSize="18" FontWeight="Bold" Foreground="White" />
+            </Canvas>
+        </Viewbox>
+    </DataTemplate>
+
+    <!-- script-py.svg：深色文件底 + 绿色蛇形 -->
+    <DataTemplate x:Key="Icon_ScriptPy">
+        <Viewbox>
+            <Canvas Width="64" Height="64">
+                <Rectangle Width="48" Height="56" Canvas.Left="8" Canvas.Top="4"
+                           RadiusX="6" RadiusY="6"
+                           Fill="{ThemeResource ScriptFileBackgroundBrush}"
+                           Stroke="{ThemeResource ScriptFileBorderBrush}" StrokeThickness="1.5" />
+                <Path Stroke="{ThemeResource AccentBrush}" StrokeThickness="3" Fill="Transparent"
+                      StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                      Data="M24 20 C24 16,28 14,32 14 C36 14,40 16,40 20 L40 26 C40 28,38 30,35 30 L29 30 C26 30,24 32,24 34 L24 40 C24 44,28 46,32 46 C36 46,40 44,40 40" />
+                <Ellipse Width="4" Height="4" Canvas.Left="26" Canvas.Top="18" Fill="{ThemeResource AccentBrush}" />
+                <Ellipse Width="4" Height="4" Canvas.Left="34" Canvas.Top="38" Fill="{ThemeResource AccentBrush}" />
+                <TextBlock Text=".py" Canvas.Left="25" Canvas.Top="27"
+                           FontFamily="Consolas" FontSize="9" FontWeight="Bold"
+                           Foreground="{ThemeResource AccentLightBrush}" />
+            </Canvas>
+        </Viewbox>
+    </DataTemplate>
+
+    <!-- folder.svg：金黄双层文件夹 -->
+    <DataTemplate x:Key="Icon_Folder">
+        <Viewbox>
+            <Canvas Width="64" Height="64">
+                <Path Fill="{ThemeResource IconFolderBrush}" Opacity="0.85"
+                      Data="M8 18 L8 50 C8 52,10 54,12 54 L52 54 C54 54,56 52,56 50 L56 22 C56 20,54 18,52 18 L30 18 L26 12 L12 12 C10 12,8 14,8 16 Z" />
+                <Path Fill="{ThemeResource IconFolderLightBrush}" Opacity="0.9"
+                      Data="M8 22 L56 22 L56 50 C56 52,54 54,52 54 L12 54 C10 54,8 52,8 50 Z" />
+            </Canvas>
+        </Viewbox>
+    </DataTemplate>
+
+    <!-- star.svg：收藏星标 -->
+    <DataTemplate x:Key="Icon_Star">
+        <Viewbox>
+            <Canvas Width="64" Height="64">
+                <Polygon Points="32,8 38,24 56,24 42,34 47,52 32,42 17,52 22,34 8,24 26,24"
+                         Fill="{ThemeResource IconFolderBrush}"
+                         Stroke="{ThemeResource IconFolderLightBrush}" StrokeThickness="1" />
+            </Canvas>
+        </Viewbox>
+    </DataTemplate>
+
+    <!-- run.svg：主按钮使用纯播放三角，与原型一致 -->
+    <DataTemplate x:Key="Icon_Run">
+        <Viewbox>
+            <Canvas Width="64" Height="64">
+                <Polygon Points="22,14 22,50 50,32" Fill="{ThemeResource TextPrimaryBrush}" />
+            </Canvas>
+        </Viewbox>
+    </DataTemplate>
+
+    <!-- stop.svg：停止方块，与原型一致 -->
+    <DataTemplate x:Key="Icon_Stop">
+        <Viewbox>
+            <Canvas Width="64" Height="64">
+                <Rectangle Width="32" Height="32" Canvas.Left="16" Canvas.Top="16"
+                           RadiusX="4" RadiusY="4" Fill="{ThemeResource StatusErrorBrush}" />
+            </Canvas>
+        </Viewbox>
+    </DataTemplate>
+
+    <!-- settings.svg：齿轮（环形描边 + 轮毂圆点 + 8 齿）。
+         注：不用 Path FillRule="EvenOdd" 打孔——该属性会使 XamlCompiler 静默崩溃 -->
+    <DataTemplate x:Key="Icon_Settings">
+        <Viewbox>
+            <Canvas Width="64" Height="64">
+                <Ellipse Width="30" Height="30" Canvas.Left="17" Canvas.Top="17"
+                         Stroke="{ThemeResource IconNeutralBrush}" StrokeThickness="6" Fill="Transparent" />
+                <Rectangle Width="6" Height="10" Canvas.Left="29" Canvas.Top="6" RadiusX="2" RadiusY="2" Fill="{ThemeResource IconNeutralBrush}" />
+                <Rectangle Width="6" Height="10" Canvas.Left="29" Canvas.Top="48" RadiusX="2" RadiusY="2" Fill="{ThemeResource IconNeutralBrush}" />
+                <Rectangle Width="10" Height="6" Canvas.Left="6" Canvas.Top="29" RadiusX="2" RadiusY="2" Fill="{ThemeResource IconNeutralBrush}" />
+                <Rectangle Width="10" Height="6" Canvas.Left="48" Canvas.Top="29" RadiusX="2" RadiusY="2" Fill="{ThemeResource IconNeutralBrush}" />
+                <Rectangle Width="6" Height="10" Canvas.Left="12" Canvas.Top="12" RadiusX="2" RadiusY="2" Fill="{ThemeResource IconNeutralBrush}"
+                           RenderTransformOrigin="0.5,0.5">
+                    <Rectangle.RenderTransform><RotateTransform Angle="-45" /></Rectangle.RenderTransform>
+                </Rectangle>
+                <Rectangle Width="6" Height="10" Canvas.Left="46" Canvas.Top="42" RadiusX="2" RadiusY="2" Fill="{ThemeResource IconNeutralBrush}"
+                           RenderTransformOrigin="0.5,0.5">
+                    <Rectangle.RenderTransform><RotateTransform Angle="-45" /></Rectangle.RenderTransform>
+                </Rectangle>
+                <Rectangle Width="6" Height="10" Canvas.Left="42" Canvas.Top="12" RadiusX="2" RadiusY="2" Fill="{ThemeResource IconNeutralBrush}"
+                           RenderTransformOrigin="0.5,0.5">
+                    <Rectangle.RenderTransform><RotateTransform Angle="45" /></Rectangle.RenderTransform>
+                </Rectangle>
+                <Rectangle Width="6" Height="10" Canvas.Left="12" Canvas.Top="42" RadiusX="2" RadiusY="2" Fill="{ThemeResource IconNeutralBrush}"
+                           RenderTransformOrigin="0.5,0.5">
+                    <Rectangle.RenderTransform><RotateTransform Angle="45" /></Rectangle.RenderTransform>
+                </Rectangle>
+            </Canvas>
+        </Viewbox>
+    </DataTemplate>
+
+    <!-- search.svg：放大镜 -->
+    <DataTemplate x:Key="Icon_Search">
+        <Viewbox>
+            <Canvas Width="64" Height="64">
+                <Ellipse Width="32" Height="32" Canvas.Left="12" Canvas.Top="12"
+                         Stroke="{ThemeResource IconMutedBrush}" StrokeThickness="3" Fill="Transparent" />
+                <Line X1="40" Y1="40" X2="54" Y2="54"
+                      Stroke="{ThemeResource IconMutedBrush}" StrokeThickness="3"
+                      StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+            </Canvas>
+        </Viewbox>
+    </DataTemplate>
+
+    <!-- add.svg：绿圈 + 十字 -->
+    <DataTemplate x:Key="Icon_Add">
+        <Viewbox>
+            <Canvas Width="64" Height="64">
+                <Ellipse Width="52" Height="52" Canvas.Left="6" Canvas.Top="6"
+                         Stroke="{ThemeResource AccentBrush}" StrokeThickness="2.5" Fill="Transparent" />
+                <Line X1="32" Y1="18" X2="32" Y2="46" Stroke="{ThemeResource AccentBrush}" StrokeThickness="3"
+                      StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                <Line X1="18" Y1="32" X2="46" Y2="32" Stroke="{ThemeResource AccentBrush}" StrokeThickness="3"
+                      StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+            </Canvas>
+        </Viewbox>
+    </DataTemplate>
+
+    <!-- refresh.svg：圆弧 + 箭头 -->
+    <DataTemplate x:Key="Icon_Refresh">
+        <Viewbox>
+            <Canvas Width="64" Height="64">
+                <Path Stroke="{ThemeResource IconMutedBrush}" StrokeThickness="3" Fill="Transparent"
+                      StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                      Data="M48 20 A20 20 0 1 0 52 32" />
+                <Polygon Points="48,12 48,24 58,18" Fill="{ThemeResource IconMutedBrush}" />
+            </Canvas>
+        </Viewbox>
+    </DataTemplate>
+
+    <!-- status-ready.svg：就绪状态灯 -->
+    <DataTemplate x:Key="Icon_StatusReady">
+        <Viewbox>
+            <Canvas Width="64" Height="64">
+                <Ellipse Width="24" Height="24" Canvas.Left="20" Canvas.Top="20" Fill="{ThemeResource AccentBrush}" />
+                <Ellipse Width="40" Height="40" Canvas.Left="12" Canvas.Top="12"
+                         Stroke="{ThemeResource AccentBrush}" StrokeThickness="2" Opacity="0.3" Fill="Transparent" />
+            </Canvas>
+        </Viewbox>
+    </DataTemplate>
+
+    <!-- edit.svg：铅笔 -->
+    <DataTemplate x:Key="Icon_Edit">
+        <Viewbox>
+            <Canvas Width="64" Height="64">
+                <Path Stroke="{ThemeResource IconTextBrush}" StrokeThickness="2.5" Fill="Transparent"
+                      StrokeLineJoin="Round"
+                      Data="M12 44 L44 12 L52 20 L20 52 L12 52 Z" />
+                <Line X1="38" Y1="18" X2="46" Y2="26" Stroke="{ThemeResource IconTextBrush}" StrokeThickness="2.5" />
+                <Line X1="12" Y1="52" X2="20" Y2="52" Stroke="{ThemeResource IconTextBrush}" StrokeThickness="2.5"
+                      StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+            </Canvas>
+        </Viewbox>
+    </DataTemplate>
+
+    <!-- info.svg：信息 -->
+    <DataTemplate x:Key="Icon_Info">
+        <Viewbox>
+            <Canvas Width="64" Height="64">
+                <Ellipse Width="52" Height="52" Canvas.Left="6" Canvas.Top="6"
+                         Stroke="{ThemeResource IconTextBrush}" StrokeThickness="2.5" Fill="Transparent" />
+                <Ellipse Width="6" Height="6" Canvas.Left="29" Canvas.Top="19" Fill="{ThemeResource IconTextBrush}" />
+                <Line X1="32" Y1="30" X2="32" Y2="46" Stroke="{ThemeResource IconTextBrush}" StrokeThickness="3"
+                      StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+            </Canvas>
+        </Viewbox>
+    </DataTemplate>
+
+    <!-- terminal.svg（Phase E 空状态：工作区未运行）：窗口框 + 提示符 + 命令行 -->
+    <DataTemplate x:Key="Icon_Terminal">
+        <Viewbox>
+            <Canvas Width="64" Height="64">
+                <Rectangle Width="52" Height="40" Canvas.Left="6" Canvas.Top="12"
+                           RadiusX="6" RadiusY="6"
+                           Stroke="{ThemeResource IconMutedBrush}" StrokeThickness="2.5" Fill="Transparent" />
+                <Path Stroke="{ThemeResource IconMutedBrush}" StrokeThickness="2.5" Fill="Transparent"
+                      StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
+                      Data="M14 24 L22 31 L14 38" />
+                <Line X1="27" Y1="38" X2="40" Y2="38" Stroke="{ThemeResource IconMutedBrush}" StrokeThickness="2.5"
+                      StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+            </Canvas>
+        </Viewbox>
+    </DataTemplate>
+
+    <!-- clock.svg（Phase E 空状态：运行历史为空）：表盘圆 + 指针 -->
+    <DataTemplate x:Key="Icon_Clock">
+        <Viewbox>
+            <Canvas Width="64" Height="64">
+                <Ellipse Width="48" Height="48" Canvas.Left="8" Canvas.Top="8"
+                         Stroke="{ThemeResource IconMutedBrush}" StrokeThickness="2.5" Fill="Transparent" />
+                <Line X1="32" Y1="32" X2="32" Y2="18" Stroke="{ThemeResource IconMutedBrush}" StrokeThickness="2.5"
+                      StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                <Line X1="32" Y1="32" X2="42" Y2="38" Stroke="{ThemeResource IconMutedBrush}" StrokeThickness="2.5"
+                      StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+            </Canvas>
+        </Viewbox>
+    </DataTemplate>
+
+    <!-- warning.svg（Phase E 空状态：目录路径失效）：三角框 + 感叹号
+         （不用 Path FillRule=EvenOdd——该属性会使 XamlCompiler 静默崩溃） -->
+    <DataTemplate x:Key="Icon_Warning">
+        <Viewbox>
+            <Canvas Width="64" Height="64">
+                <Polygon Points="32,8 58,54 6,54"
+                         Stroke="{ThemeResource IconMutedBrush}" StrokeThickness="2.5" Fill="Transparent"
+                         StrokeLineJoin="Round" />
+                <Line X1="32" Y1="24" X2="32" Y2="38" Stroke="{ThemeResource IconMutedBrush}" StrokeThickness="3"
+                      StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                <Ellipse Width="4" Height="4" Canvas.Left="30" Canvas.Top="44" Fill="{ThemeResource IconMutedBrush}" />
+            </Canvas>
+        </Viewbox>
+    </DataTemplate>
+</ResourceDictionary>
