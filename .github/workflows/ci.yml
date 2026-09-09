@@ -50,16 +50,55 @@ jobs:
             throw "vswhere.exe was not found on the GitHub-hosted Windows runner."
           }
 
-          $visualStudio = (& $vswhere -latest -products * -requires Microsoft.Component.MSBuild -property installationPath).Trim()
-          if ([string]::IsNullOrWhiteSpace($visualStudio)) {
-            throw "A Visual Studio installation containing MSBuild was not found."
+          $vswhereVersion = ((& $vswhere -version) | Select-Object -First 1).Trim()
+          $installationsJson = (& $vswhere -all -products * -requires Microsoft.Component.MSBuild -format json -utf8) -join "`n"
+          $installations = @($installationsJson | ConvertFrom-Json)
+          if ($installations.Count -eq 0) {
+            throw "No Visual Studio installation containing MSBuild was found."
           }
 
-          $appxTools = Join-Path $visualStudio "MSBuild\Microsoft\VisualStudio\v17.0\AppxPackage\"
-          if (-not (Test-Path -LiteralPath $appxTools -PathType Container)) {
-            throw "The Appx MSBuild tools directory was not found: $appxTools"
+          $requiredFiles = @(
+            "Microsoft.AppxPackage.Targets"
+            "Microsoft.Build.AppxPackage.dll"
+            "Microsoft.Build.Packaging.Pri.Tasks.dll"
+          )
+          $candidates = foreach ($installation in $installations) {
+            $visualStudioRoot = Join-Path $installation.installationPath "MSBuild\Microsoft\VisualStudio"
+            if (-not (Test-Path -LiteralPath $visualStudioRoot -PathType Container)) {
+              continue
+            }
+
+            foreach ($versionDirectory in Get-ChildItem -LiteralPath $visualStudioRoot -Directory -Filter "v*") {
+              $version = $null
+              if (-not [Version]::TryParse($versionDirectory.Name.Substring(1), [ref]$version)) {
+                continue
+              }
+
+              $appxPath = Join-Path $versionDirectory.FullName "AppxPackage"
+              $isValid = (Test-Path -LiteralPath $appxPath -PathType Container) -and
+                (@($requiredFiles | Where-Object { -not (Test-Path -LiteralPath (Join-Path $appxPath $_) -PathType Leaf) }).Count -eq 0)
+              if ($isValid) {
+                [pscustomobject]@{
+                  AppxVersion = $version
+                  InstallationVersion = [Version]$installation.installationVersion
+                  VisualStudioVersion = $installation.catalog.productDisplayVersion
+                  Path = $appxPath
+                }
+              }
+            }
           }
 
+          $selected = $candidates | Sort-Object -Property `
+            @{ Expression = "AppxVersion"; Descending = $true }, `
+            @{ Expression = "InstallationVersion"; Descending = $true } | Select-Object -First 1
+          if ($null -eq $selected) {
+            throw "No valid AppxPackage directory was found under the Visual Studio MSBuild roots. Required files: $($requiredFiles -join ', ')."
+          }
+
+          $appxTools = $selected.Path.TrimEnd("\") + "\"
+          Write-Host "vswhere version: $vswhereVersion"
+          Write-Host "Visual Studio version: $($selected.VisualStudioVersion)"
+          Write-Host "AppxMSBuildToolsPath: $appxTools"
           "AppxMSBuildToolsPath=$appxTools" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
       - name: Restore PyRunner with locked dependencies
