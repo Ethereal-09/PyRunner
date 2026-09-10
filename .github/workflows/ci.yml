@@ -111,10 +111,35 @@ jobs:
         run: dotnet build .\PyRunner\PyRunner.csproj -c Release -p:Platform=x64 --no-restore
 
       - name: Build PyRunner.Verification
-        run: dotnet build .\PyRunner.Verification\PyRunner.Verification.csproj -c Debug -p:Platform=x64 --no-restore
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $verificationOutput = Join-Path $env:RUNNER_TEMP "PyRunner.Verification"
+          dotnet build .\PyRunner.Verification\PyRunner.Verification.csproj `
+            -c Debug `
+            -p:Platform=x64 `
+            --no-restore `
+            --output $verificationOutput
 
       - name: Run PyRunner.Verification
-        run: dotnet .\PyRunner.Verification\bin\x64\Debug\net8.0\PyRunner.Verification.dll
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $verificationOutput = Join-Path $env:RUNNER_TEMP "PyRunner.Verification"
+          $verificationDll = Join-Path $verificationOutput "PyRunner.Verification.dll"
+
+          if (-not (Test-Path -LiteralPath $verificationDll -PathType Leaf)) {
+            Write-Host "Verification output files:"
+            if (Test-Path -LiteralPath $verificationOutput -PathType Container) {
+              Get-ChildItem -LiteralPath $verificationOutput -File |
+                Select-Object -ExpandProperty Name |
+                Sort-Object |
+                ForEach-Object { Write-Host "  $_" }
+            }
+            throw "PyRunner.Verification.dll was not produced."
+          }
+
+          dotnet $verificationDll
 
       - name: Verify terminal vendor manifest hashes
         shell: pwsh
