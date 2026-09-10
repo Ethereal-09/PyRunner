@@ -4,7 +4,7 @@ using PyRunner.Services;
 
 internal static class UpdateStateStoreTests
 {
-    public static async Task<int> RunAsync()
+    public static Task<int> RunAsync()
     {
         var failures = 0;
         void Verify(bool condition, string name)
@@ -27,14 +27,20 @@ internal static class UpdateStateStoreTests
             notificationHadUiAccess = dispatcher.HasThreadAccess;
         };
 
-        await Task.Run(() => store.Complete(new UpdateCheckResult(UpdateCheckStatus.Offline)));
+        var worker = new Thread(() => store.Complete(new UpdateCheckResult(UpdateCheckStatus.Offline)))
+        {
+            IsBackground = true,
+        };
+        worker.Start();
+        if (!worker.Join(TimeSpan.FromSeconds(5)))
+            throw new TimeoutException("Background update state publication did not complete.");
         Verify(!notificationRaised && dispatcher.PendingCount == 1,
             "background update state publication is queued instead of touching UI subscribers");
         dispatcher.Drain();
         Verify(notificationRaised && notificationHadUiAccess,
             "queued update state notification runs on the UI dispatcher thread");
 
-        return failures;
+        return Task.FromResult(failures);
     }
 
     private sealed class QueuedDispatcher : IUiDispatcher

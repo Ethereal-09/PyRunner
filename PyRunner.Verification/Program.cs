@@ -289,11 +289,14 @@ Verify(
     "help quick actions focus the existing settings sections without mutating configuration");
 
 var artifactsRoot = Path.Combine(FindSolutionRoot(), "artifacts");
+var artifactPythonFiles = Directory.Exists(artifactsRoot)
+    ? Directory.EnumerateFiles(artifactsRoot, "*.py", SearchOption.AllDirectories)
+    : Enumerable.Empty<string>();
 Verify(
-    !Directory.EnumerateFiles(artifactsRoot, "*.py", SearchOption.AllDirectories)
-        .Any(path => path.Contains("ui-demo-scripts", StringComparison.OrdinalIgnoreCase) ||
-                     path.Contains("gui-test-scripts", StringComparison.OrdinalIgnoreCase) ||
-                     Path.GetFileName(path).Equals("seed_gui_test.py", StringComparison.OrdinalIgnoreCase)),
+    !artifactPythonFiles.Any(path =>
+        path.Contains("ui-demo-scripts", StringComparison.OrdinalIgnoreCase) ||
+        path.Contains("gui-test-scripts", StringComparison.OrdinalIgnoreCase) ||
+        Path.GetFileName(path).Equals("seed_gui_test.py", StringComparison.OrdinalIgnoreCase)),
     "bundled demo script fixtures are empty");
 
 failures += await HelpAboutViewModelTests.RunAsync();
@@ -317,9 +320,14 @@ try
     SetStdHandle(-12, IntPtr.Zero);
 
     // ConPTY 全链路：独立探针输出 ANSI/中文，等待 stdin，再以指定退出码结束。
-    var probePath = Path.Combine(FindSolutionRoot(), "artifacts", "test-probe", "PyRunner.TerminalProbe.exe");
-    if (!File.Exists(probePath))
-        throw new FileNotFoundException("Terminal probe was not built", probePath);
+    var probeCandidates = new[]
+    {
+        Path.Combine(AppContext.BaseDirectory, "PyRunner.TerminalProbe.exe"),
+        Path.Combine(FindSolutionRoot(), "artifacts", "test-probe", "PyRunner.TerminalProbe.exe"),
+    };
+    var probePath = probeCandidates.FirstOrDefault(File.Exists);
+    if (probePath is null)
+        throw new FileNotFoundException($"Terminal probe was not built. Checked: {string.Join(", ", probeCandidates)}");
 
     var outputBytes = new List<byte>();
     var inputPrompt = new ManualResetEventSlim();
