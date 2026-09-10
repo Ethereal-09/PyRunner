@@ -594,8 +594,10 @@ try
 
     var interpreterService = new InterpreterService(factory);
     var interpreter = interpreterService.AddFromPath(pythonPath!);
-    Verify(interpreter.Version?.StartsWith("3.13", StringComparison.Ordinal) == true,
-        "interpreter version detection", interpreter.Version);
+    var expectedPythonVersion = GetPythonVersion(pythonPath!);
+    Verify(!expectedPythonVersion.Equals("unknown", StringComparison.Ordinal) &&
+           interpreter.Version?.Equals(expectedPythonVersion, StringComparison.Ordinal) == true,
+        "interpreter version detection", $"{interpreter.Version} (expected {expectedPythonVersion})");
     Verify(interpreterService.GetDefault()?.Id == interpreter.Id, "first interpreter becomes default");
 
     var scriptService = new ScriptService(factory);
