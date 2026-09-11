@@ -74,7 +74,7 @@ public sealed class AppMetadataService : IAppMetadataService
             BuildNumber: metadata.GetValueOrDefault("BuildNumber", "0"),
             Architecture: RuntimeInformation.ProcessArchitecture.ToString().ToLowerInvariant(),
             ReleaseChannel: metadata.GetValueOrDefault("ReleaseChannel", "stable"),
-            AuthorAccount: metadata.GetValueOrDefault("AuthorAccount", "@pyrunner_dev"),
+            AuthorAccount: metadata.GetValueOrDefault("AuthorAccount", "@Ethereal-09"),
             AuthorIdentity: metadata.GetValueOrDefault("AuthorIdentity", "independent_developer"),
             DotNetRuntime: RuntimeInformation.FrameworkDescription,
             WindowsAppSdk: $"Windows App SDK {metadata.GetValueOrDefault("WindowsAppSdkVersion", "1.5")}",

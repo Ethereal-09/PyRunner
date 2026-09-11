@@ -342,7 +342,7 @@ internal static class GitHubUpdateServiceTests
     private sealed class FixedMetadata(string version) : IAppMetadataService
     {
         public AppMetadata GetSnapshot() => new(
-            version, "1", "x64", "stable", "@pyrunner_dev", "independent_developer",
+            version, "1", "x64", "stable", "@Ethereal-09", "independent_developer",
             ".NET 8", "Windows App SDK", "Windows", "3.13", "", "xterm.js · ConPTY", "", "stable");
     }
 

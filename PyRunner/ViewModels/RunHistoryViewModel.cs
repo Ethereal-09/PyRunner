@@ -121,7 +121,9 @@ public sealed partial class RunHistoryViewModel : ObservableObject
             StatusText = StatusText(status),
             ExitCodeText = record.ExitCode?.ToString(CultureInfo.InvariantCulture) ?? "-",
             Summary = BuildSummary(output),
-            FullOutput = AnsiRegex.Replace(output, string.Empty),
+            // 终端程序在清屏或刷新输出时常会留下大量前导换行。
+            // 详情视图从第一个实际字符开始，不改动后续输出的排版。
+            FullOutput = AnsiRegex.Replace(output, string.Empty).TrimStart(),
         };
     }
 

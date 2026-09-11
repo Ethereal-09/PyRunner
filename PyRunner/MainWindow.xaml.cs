@@ -1740,25 +1740,32 @@ public sealed partial class MainWindow : Window
                 display = full;
             }
 
+            var outputScroller = new ScrollViewer
+            {
+                Content = new TextBlock
+                {
+                    Text = display,
+                    FontFamily = new FontFamily("Cascadia Mono, Consolas, monospace"),
+                    FontSize = 12,
+                    TextWrapping = TextWrapping.Wrap,
+                    IsTextSelectionEnabled = true,
+                    VerticalAlignment = VerticalAlignment.Top,
+                },
+                MaxWidth = 560,
+                MaxHeight = 360,
+                VerticalAlignment = VerticalAlignment.Top,
+                VerticalContentAlignment = VerticalAlignment.Top,
+            };
+
             var dialog = new ContentDialog
             {
                 Title = _historyViewModel.DetailTitleText,
-                Content = new ScrollViewer
-                {
-                    Content = new TextBlock
-                    {
-                        Text = display,
-                        FontFamily = new FontFamily("Cascadia Mono, Consolas, monospace"),
-                        FontSize = 12,
-                        TextWrapping = TextWrapping.Wrap,
-                        IsTextSelectionEnabled = true,
-                    },
-                    MaxWidth = 560,
-                    MaxHeight = 360,
-                },
+                Content = outputScroller,
                 CloseButtonText = _historyViewModel.CloseText,
                 DefaultButton = ContentDialogButton.Close,
             };
+            dialog.Opened += (_, _) =>
+                outputScroller.ChangeView(null, 0, null, disableAnimation: true);
             PrepareDialog(dialog);
             await dialog.ShowAsync();
         }

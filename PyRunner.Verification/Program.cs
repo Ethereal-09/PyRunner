@@ -62,6 +62,7 @@ var sidebarSource = File.ReadAllText(Path.Combine(sourceRoot, "Views", "SidebarV
 var sidebarCode = File.ReadAllText(Path.Combine(sourceRoot, "Views", "SidebarView.xaml.cs"));
 var mainWindowSource = File.ReadAllText(Path.Combine(sourceRoot, "MainWindow.xaml"));
 var mainWindowCode = File.ReadAllText(Path.Combine(sourceRoot, "MainWindow.xaml.cs"));
+var runHistoryCode = File.ReadAllText(Path.Combine(sourceRoot, "ViewModels", "RunHistoryViewModel.cs"));
 Verify(
     !sidebarSource.Contains("SidebarAddButton", StringComparison.Ordinal) &&
     !mainWindowSource.Contains("ShortcutAdd", StringComparison.Ordinal) &&
@@ -109,6 +110,12 @@ Verify(
     scriptEditDialogSource.Contains("Background=\"{ThemeResource PanelSurfaceRaisedBrush}\"", StringComparison.Ordinal) &&
     !settingsDialogSource.Contains("TintColor=\"#282A2F\"", StringComparison.Ordinal),
     "title bar pointer hit testing and dialog theme propagation are wired");
+
+Verify(
+    runHistoryCode.Contains("AnsiRegex.Replace(output, string.Empty).TrimStart()", StringComparison.Ordinal) &&
+    mainWindowCode.Contains("VerticalContentAlignment = VerticalAlignment.Top", StringComparison.Ordinal) &&
+    mainWindowCode.Contains("outputScroller.ChangeView(null, 0, null, disableAnimation: true)", StringComparison.Ordinal),
+    "run history details trim leading whitespace and open scrolled to the top");
 
 Verify(
     onboardingSource.Contains("x:Class=\"PyRunner.Views.OnboardingWindow\"", StringComparison.Ordinal) &&
@@ -289,6 +296,9 @@ Verify(
 Verify(
     appCode.Contains("https://api.github.com/repos/Ethereal-09/PyRunner/releases/latest", StringComparison.Ordinal) &&
     appCode.Contains("https://github.com/Ethereal-09/PyRunner/releases", StringComparison.Ordinal) &&
+    appCode.Contains("AuthorHomepage: new Uri(\"https://github.com/Ethereal-09\")", StringComparison.Ordinal) &&
+    metadataCode.Contains("@Ethereal-09", StringComparison.Ordinal) &&
+    projectSource.Contains("AuthorAccount\" Value=\"@Ethereal-09", StringComparison.Ordinal) &&
     appCode.Contains("application/vnd.github+json", StringComparison.Ordinal) &&
     appCode.Contains("X-GitHub-Api-Version", StringComparison.Ordinal) &&
     updateCoordinatorCode.Contains("TimeSpan.FromHours(24)", StringComparison.Ordinal) &&

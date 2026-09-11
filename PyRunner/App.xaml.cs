@@ -62,6 +62,7 @@ public partial class App : Application
             ProjectHomepage: new Uri("https://github.com/Ethereal-09/PyRunner"),
             IssueTracker: new Uri("https://github.com/Ethereal-09/PyRunner/issues"),
             ReleasesPage: new Uri("https://github.com/Ethereal-09/PyRunner/releases"),
+            AuthorHomepage: new Uri("https://github.com/Ethereal-09"),
             UpdateFeed: new Uri("https://api.github.com/repos/Ethereal-09/PyRunner/releases/latest")));
         services.AddSingleton(_ =>
         {

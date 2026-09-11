@@ -147,7 +147,7 @@ internal static class HelpAboutViewModelTests
     private sealed class FakeMetadata : IAppMetadataService
     {
         public AppMetadata Snapshot { get; set; } = new(
-            "1.0.0", "282", "x64", "stable", "@pyrunner_dev", "independent_developer",
+            "1.0.0", "282", "x64", "stable", "@Ethereal-09", "independent_developer",
             ".NET 8.0.29", "Windows App SDK 1.5", "Windows 11", "3.13.13",
             "152.0", "xterm.js · ConPTY", string.Empty, "stable");
 
