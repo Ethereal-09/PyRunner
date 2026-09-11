@@ -625,4 +625,41 @@
   <data name="Help_LicensePage" xml:space="preserve"><value>License</value></data>
   <data name="Help_OnlineResourcesUnavailable" xml:space="preserve"><value>Online resources and update checking are unavailable until release URLs are configured.</value></data>
   <data name="Help_Copyright" xml:space="preserve"><value>© {0} PyRunner</value></data>
+  <data name="Nav_Schedules" xml:space="preserve"><value>Schedules</value></data>
+  <data name="Schedule_Title" xml:space="preserve"><value>Scheduled tasks</value></data>
+  <data name="Schedule_Add" xml:space="preserve"><value>New task</value></data>
+  <data name="Schedule_Edit" xml:space="preserve"><value>Edit scheduled task</value></data>
+  <data name="Schedule_Empty" xml:space="preserve"><value>No scheduled tasks. Create one to run a script automatically while PyRunner is open.</value></data>
+  <data name="Schedule_CreateForScript" xml:space="preserve"><value>Create scheduled task…</value></data>
+  <data name="Schedule_RunNow" xml:space="preserve"><value>Run now</value></data>
+  <data name="Schedule_Column_Script" xml:space="preserve"><value>Task / script</value></data>
+  <data name="Schedule_Column_Rule" xml:space="preserve"><value>Schedule</value></data>
+  <data name="Schedule_Column_Next" xml:space="preserve"><value>Next run</value></data>
+  <data name="Schedule_Column_Result" xml:space="preserve"><value>Last result</value></data>
+  <data name="Schedule_Type_Once" xml:space="preserve"><value>Once</value></data>
+  <data name="Schedule_Type_Daily" xml:space="preserve"><value>Daily</value></data>
+  <data name="Schedule_Type_Weekly" xml:space="preserve"><value>Weekly</value></data>
+  <data name="Schedule_Type_Interval" xml:space="preserve"><value>Fixed interval</value></data>
+  <data name="Schedule_Field_Name" xml:space="preserve"><value>Task name</value></data>
+  <data name="Schedule_Field_Script" xml:space="preserve"><value>Script</value></data>
+  <data name="Schedule_Field_Type" xml:space="preserve"><value>Frequency</value></data>
+  <data name="Schedule_Field_StartDate" xml:space="preserve"><value>Start date</value></data>
+  <data name="Schedule_Field_Time" xml:space="preserve"><value>Time</value></data>
+  <data name="Schedule_Field_Weekdays" xml:space="preserve"><value>Weekdays</value></data>
+  <data name="Schedule_Field_Interval" xml:space="preserve"><value>Interval in minutes</value></data>
+  <data name="Schedule_Field_Enabled" xml:space="preserve"><value>Enabled</value></data>
+  <data name="Schedule_Rule_Once" xml:space="preserve"><value>Once · {0}</value></data>
+  <data name="Schedule_Rule_Daily" xml:space="preserve"><value>Daily · {0}</value></data>
+  <data name="Schedule_Rule_Weekly" xml:space="preserve"><value>{0} · {1}</value></data>
+  <data name="Schedule_Rule_Interval" xml:space="preserve"><value>Every {0} min</value></data>
+  <data name="Schedule_Result_Skipped" xml:space="preserve"><value>Skipped (already running)</value></data>
+  <data name="Schedule_Result_Missing" xml:space="preserve"><value>Script unavailable</value></data>
+  <data name="Schedule_Delete_Title" xml:space="preserve"><value>Delete scheduled task?</value></data>
+  <data name="Schedule_Delete_Content" xml:space="preserve"><value>“{0}” will no longer run automatically.</value></data>
+  <data name="Schedule_Error_NameRequired" xml:space="preserve"><value>Enter a task name.</value></data>
+  <data name="Schedule_Error_ScriptRequired" xml:space="preserve"><value>Select an available script.</value></data>
+  <data name="Schedule_Error_TimeInvalid" xml:space="preserve"><value>Select a valid date and time.</value></data>
+  <data name="Schedule_Error_WeekdayRequired" xml:space="preserve"><value>Select at least one weekday.</value></data>
+  <data name="Schedule_Error_IntervalInvalid" xml:space="preserve"><value>Interval must be at least one minute.</value></data>
+  <data name="Weekday_Sun" xml:space="preserve"><value>Sun</value></data><data name="Weekday_Mon" xml:space="preserve"><value>Mon</value></data><data name="Weekday_Tue" xml:space="preserve"><value>Tue</value></data><data name="Weekday_Wed" xml:space="preserve"><value>Wed</value></data><data name="Weekday_Thu" xml:space="preserve"><value>Thu</value></data><data name="Weekday_Fri" xml:space="preserve"><value>Fri</value></data><data name="Weekday_Sat" xml:space="preserve"><value>Sat</value></data>
 </root>

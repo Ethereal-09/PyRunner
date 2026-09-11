@@ -4,6 +4,7 @@ public enum ShellPage
 {
     Scripts,
     Runs,
+    ScheduledTasks,
     Help,
 }
 

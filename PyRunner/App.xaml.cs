@@ -85,6 +85,8 @@ public partial class App : Application
         services.AddSingleton<IShellNavigationService, ShellNavigationService>();
         services.AddSingleton<IScriptPathService, ScriptPathService>();
         services.AddSingleton<IRunRecordService, RunRecordService>();
+        services.AddSingleton<IScheduledTaskService, ScheduledTaskService>();
+        services.AddSingleton<ScheduleCoordinator>();
 
         // Phase E：目录监听（单例，窗口关闭后随容器 Dispose 回收 watcher）与友好通知
         services.AddSingleton<IScriptDirectoryWatcher, ScriptDirectoryWatcher>();
@@ -104,6 +106,9 @@ public partial class App : Application
         services.AddTransient<SettingsDialog>();
         // 运行历史与独立首次启动窗口
         services.AddTransient<RunHistoryViewModel>();
+        services.AddTransient<ScheduledTasksViewModel>();
+        services.AddTransient<ScheduledTasksPage>();
+        services.AddTransient<ScheduledTaskEditDialog>();
         services.AddTransient<HelpAboutViewModel>();
         services.AddTransient<HelpAboutPage>();
         services.AddTransient<OnboardingWindow>();
@@ -111,6 +116,8 @@ public partial class App : Application
         services.AddTransient<Func<ScriptEditDialog>>(sp => () => sp.GetRequiredService<ScriptEditDialog>());
         services.AddTransient<Func<SettingsDialog>>(sp => () => sp.GetRequiredService<SettingsDialog>());
         services.AddTransient<Func<HelpAboutPage>>(sp => () => sp.GetRequiredService<HelpAboutPage>());
+        services.AddTransient<Func<ScheduledTasksPage>>(sp => () => sp.GetRequiredService<ScheduledTasksPage>());
+        services.AddTransient<Func<ScheduledTaskEditDialog>>(sp => () => sp.GetRequiredService<ScheduledTaskEditDialog>());
 
         return services.BuildServiceProvider();
     }
@@ -181,7 +188,11 @@ public partial class App : Application
                 Services.GetRequiredService<RunHistoryViewModel>(),
                 Services.GetRequiredService<IShellNavigationService>(),
                 Services.GetRequiredService<Func<HelpAboutPage>>(),
-                Services.GetRequiredService<UpdateCheckCoordinator>());
+                Services.GetRequiredService<UpdateCheckCoordinator>(),
+                Services.GetRequiredService<IScheduledTaskService>(),
+                Services.GetRequiredService<ScheduleCoordinator>(),
+                Services.GetRequiredService<Func<ScheduledTasksPage>>(),
+                Services.GetRequiredService<Func<ScheduledTaskEditDialog>>());
         }
         catch (Exception ex)
         {

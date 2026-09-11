@@ -57,12 +57,39 @@ foreach (var test in cases)
     Console.Error.WriteLine($"  actual:   {test.Actual}");
 }
 
+DateTimeOffset LocalUtc(int year, int month, int day, int hour, int minute)
+{
+    var local = new DateTime(year, month, day, hour, minute, 0, DateTimeKind.Unspecified);
+    return new DateTimeOffset(local, TimeZoneInfo.Local.GetUtcOffset(local)).ToUniversalTime();
+}
+
+var dailyTask = new ScheduledTask { ScheduleType = ScheduleTypes.Daily, StartAtLocal = "2026-01-01T09:30:00" };
+var dailyNext = ScheduleCalculator.GetNextUtc(dailyTask, LocalUtc(2026, 9, 10, 10, 0));
+Verify(dailyNext?.ToLocalTime().DateTime == new DateTime(2026, 9, 11, 9, 30, 0), "daily schedule advances to the next local day");
+
+var weeklyTask = new ScheduledTask { ScheduleType = ScheduleTypes.Weekly, StartAtLocal = "2026-01-01T09:00:00", DaysOfWeek = 1 << (int)DayOfWeek.Friday };
+var weeklyNext = ScheduleCalculator.GetNextUtc(weeklyTask, LocalUtc(2026, 9, 10, 10, 0));
+Verify(weeklyNext?.ToLocalTime().DateTime == new DateTime(2026, 9, 11, 9, 0, 0), "weekly schedule honors the weekday mask");
+
+var intervalTask = new ScheduledTask { ScheduleType = ScheduleTypes.Interval, StartAtLocal = "2026-09-10T09:00:00", IntervalMinutes = 30 };
+var intervalNext = ScheduleCalculator.GetNextUtc(intervalTask, LocalUtc(2026, 9, 10, 10, 1));
+Verify(intervalNext?.ToLocalTime().DateTime == new DateTime(2026, 9, 10, 10, 30, 0), "interval schedule advances from its stable anchor");
+
 var sourceRoot = Path.Combine(FindSolutionRoot(), "PyRunner");
 var sidebarSource = File.ReadAllText(Path.Combine(sourceRoot, "Views", "SidebarView.xaml"));
 var sidebarCode = File.ReadAllText(Path.Combine(sourceRoot, "Views", "SidebarView.xaml.cs"));
 var mainWindowSource = File.ReadAllText(Path.Combine(sourceRoot, "MainWindow.xaml"));
 var mainWindowCode = File.ReadAllText(Path.Combine(sourceRoot, "MainWindow.xaml.cs"));
 var runHistoryCode = File.ReadAllText(Path.Combine(sourceRoot, "ViewModels", "RunHistoryViewModel.cs"));
+var scheduledPageSource = File.ReadAllText(Path.Combine(sourceRoot, "Views", "ScheduledTasksPage.xaml"));
+var scheduledDialogSource = File.ReadAllText(Path.Combine(sourceRoot, "Views", "ScheduledTaskEditDialog.xaml"));
+Verify(
+    mainWindowSource.Contains("NavSchedulesButton", StringComparison.Ordinal) &&
+    mainWindowSource.IndexOf("NavRunsButton", StringComparison.Ordinal) < mainWindowSource.IndexOf("NavSchedulesButton", StringComparison.Ordinal) &&
+    mainWindowSource.IndexOf("NavSchedulesButton", StringComparison.Ordinal) < mainWindowSource.IndexOf("SettingsButton", StringComparison.Ordinal) &&
+    scheduledPageSource.Contains("AddScheduledTaskButton", StringComparison.Ordinal) &&
+    scheduledDialogSource.Contains("ScheduledTaskNameBox", StringComparison.Ordinal),
+    "scheduled tasks have top-level navigation, management page, and edit dialog");
 Verify(
     !sidebarSource.Contains("SidebarAddButton", StringComparison.Ordinal) &&
     !mainWindowSource.Contains("ShortcutAdd", StringComparison.Ordinal) &&
@@ -336,6 +363,7 @@ failures += await GitHubUpdateServiceTests.RunAsync();
 failures += await JsonSettingsServiceTests.RunAsync();
 failures += await UpdateStateStoreTests.RunAsync();
 failures += ProductVersionParserTests.Run();
+failures += ScheduledTaskServiceTests.Run();
 
 var temporaryRoot = Path.Combine(Path.GetTempPath(), "PyRunner.Verification", Guid.NewGuid().ToString("N"));
 try
@@ -596,7 +624,7 @@ try
     using (var command = connection.CreateCommand())
     {
         command.CommandText = "SELECT COALESCE(MAX(Version), 0) FROM SchemaVersion;";
-        Verify(Convert.ToInt32(command.ExecuteScalar()) == 1, "schema migration is idempotent");
+        Verify(Convert.ToInt32(command.ExecuteScalar()) == 2, "schema migration is idempotent");
     }
 
     var scriptsDirectory = Path.Combine(temporaryRoot, "scripts folder");

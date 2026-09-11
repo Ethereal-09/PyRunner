@@ -1,0 +1,14 @@
+<ContentDialog x:Class="PyRunner.Views.ScheduledTaskEditDialog" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" DefaultButton="Primary" Background="{ThemeResource PanelSurfaceRaisedBrush}" Style="{StaticResource DefaultContentDialogStyle}">
+    <ScrollViewer MaxHeight="520" VerticalScrollBarVisibility="Auto"><StackPanel MinWidth="420" Spacing="8">
+        <TextBlock x:Name="NameLabel" /><TextBox x:Name="NameBox" AutomationProperties.AutomationId="ScheduledTaskNameBox" />
+        <TextBlock x:Name="ScriptLabel" Margin="0,4,0,0" /><ComboBox x:Name="ScriptCombo" HorizontalAlignment="Stretch" />
+        <TextBlock x:Name="TypeLabel" Margin="0,4,0,0" /><ComboBox x:Name="TypeCombo" HorizontalAlignment="Stretch" SelectionChanged="OnTypeChanged" />
+        <TextBlock x:Name="DateLabel" Margin="0,4,0,0" /><CalendarDatePicker x:Name="DatePicker" HorizontalAlignment="Stretch" />
+        <TextBlock x:Name="TimeLabel" Margin="0,4,0,0" /><TimePicker x:Name="TaskTimePicker" ClockIdentifier="24HourClock" HorizontalAlignment="Stretch" />
+        <StackPanel x:Name="WeekdayPanel" Visibility="Collapsed" Spacing="6"><TextBlock x:Name="WeekdayLabel" /><StackPanel Orientation="Horizontal" Spacing="9">
+            <CheckBox x:Name="Mon" Content="一" /><CheckBox x:Name="Tue" Content="二" /><CheckBox x:Name="Wed" Content="三" /><CheckBox x:Name="Thu" Content="四" /><CheckBox x:Name="Fri" Content="五" /><CheckBox x:Name="Sat" Content="六" /><CheckBox x:Name="Sun" Content="日" />
+        </StackPanel></StackPanel>
+        <StackPanel x:Name="IntervalPanel" Visibility="Collapsed" Spacing="6"><TextBlock x:Name="IntervalLabel" /><NumberBox x:Name="IntervalBox" Minimum="1" Maximum="525600" SpinButtonPlacementMode="Compact" Value="60" /></StackPanel>
+        <ToggleSwitch x:Name="EnabledToggle" IsOn="True" Margin="0,5,0,0" /><TextBlock x:Name="ErrorText" Foreground="{ThemeResource DangerBrush}" TextWrapping="Wrap" />
+    </StackPanel></ScrollViewer>
+</ContentDialog>

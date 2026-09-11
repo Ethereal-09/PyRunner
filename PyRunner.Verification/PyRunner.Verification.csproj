@@ -16,6 +16,7 @@
     <Compile Include="..\PyRunner\Models\RunRecord.cs" Link="Models\RunRecord.cs" />
     <Compile Include="..\PyRunner\Models\Script.cs" Link="Models\Script.cs" />
     <Compile Include="..\PyRunner\Models\ScriptPath.cs" Link="Models\ScriptPath.cs" />
+    <Compile Include="..\PyRunner\Models\ScheduledTask.cs" Link="Models\ScheduledTask.cs" />
     <Compile Include="..\PyRunner\Services\IInterpreterService.cs" Link="Services\IInterpreterService.cs" />
     <Compile Include="..\PyRunner\Services\IScriptService.cs" Link="Services\IScriptService.cs" />
     <Compile Include="..\PyRunner\Services\InterpreterService.cs" Link="Services\InterpreterService.cs" />
@@ -24,6 +25,7 @@
     <Compile Include="..\PyRunner\Services\ScriptDirectoryPolicy.cs" Link="Services\ScriptDirectoryPolicy.cs" />
     <Compile Include="..\PyRunner\Services\ScriptPathService.cs" Link="Services\ScriptPathService.cs" />
     <Compile Include="..\PyRunner\Services\ScriptService.cs" Link="Services\ScriptService.cs" />
+    <Compile Include="..\PyRunner\Services\ScheduledTaskService.cs" Link="Services\ScheduledTaskService.cs" />
     <Compile Include="..\PyRunner\Services\ValidationException.cs" Link="Services\ValidationException.cs" />
     <Compile Include="..\PyRunner\Terminal\ConPtyNative.cs" Link="Terminal\ConPtyNative.cs" />
     <Compile Include="..\PyRunner\Terminal\PtySession.cs" Link="Terminal\PtySession.cs" />
@@ -49,5 +51,8 @@
     <EmbeddedResource Include="..\PyRunner\Data\Migrations\001_initial.sql"
                       Link="Data\Migrations\001_initial.sql"
                       LogicalName="PyRunner.Data.Migrations.001_initial.sql" />
+    <EmbeddedResource Include="..\PyRunner\Data\Migrations\002_scheduled_tasks.sql"
+                      Link="Data\Migrations\002_scheduled_tasks.sql"
+                      LogicalName="PyRunner.Data.Migrations.002_scheduled_tasks.sql" />
   </ItemGroup>
 </Project>

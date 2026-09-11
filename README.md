@@ -1,8 +1,8 @@
 # PyRunner
 
-PyRunner 是一个本地 Windows Python 脚本管理器。它使用 WinUI 3 提供脚本目录自动导入、分类、搜索、收藏、解释器管理、运行历史、中英文界面和深浅主题，并通过 WebView2 + xterm.js + ConPTY 在应用内运行交互式脚本。
+PyRunner 是一个本地 Windows Python 脚本管理器。它使用 WinUI 3 提供脚本目录自动导入、分类、搜索、收藏、解释器管理、运行历史、应用内定时任务、中英文界面和深浅主题，并通过 WebView2 + xterm.js + ConPTY 在应用内运行交互式脚本。
 
-> **开发状态：** 项目仍处于首个公开版本发布前阶段，目前没有正式稳定版 GitHub Release。公开 API、数据格式和安装方式仍可能调整。
+> **发布状态：** 当前稳定版为 v1.1.0，安装包与校验文件通过 GitHub Releases 提供。
 
 脚本从「设置」中配置的目录自动扫描，无需逐个新增。每次运行都有独立终端标签；切换标签会同步更新上方脚本信息和运行/停止状态。终端支持 `Ctrl+Shift+C` 复制、`Ctrl+Shift+V` 粘贴、鼠标右键粘贴以及普通 `Ctrl+C` 中断脚本。右上角按钮可在深色与浅色主题之间即时切换，语言仍在设置中选择。
 
@@ -64,6 +64,8 @@ dotnet publish .\PyRunner\PyRunner.csproj -p:PublishProfile=win-x64 -p:Platform=
 - 开机启动：设置开启后写入当前用户的 `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`
 
 删除脚本登记不会删除磁盘上的 `.py` 文件。应用退出或停止任务时，Job Object 会清理该任务派生的进程树。
+
+定时任务仅在 PyRunner 处于打开状态时触发；当前版本不会注册 Windows 任务计划，也不会在应用退出后后台运行。系统休眠期间错过的重复任务会在恢复后触发一次，然后继续计算下一次执行时间。
 
 脚本内容、脚本路径、Python 解释器路径、设置和运行历史默认只保存在本机。PyRunner 不上传这些数据。更新检测只匿名访问本仓库的 GitHub Releases `latest` API，并最多每24小时自动检查一次；手动检查会忽略本地时间缓存。应用不会自动下载或执行 Release 文件。
 

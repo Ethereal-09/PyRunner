@@ -101,6 +101,11 @@ public sealed partial class MainWindow : Window
     private readonly CancellationTokenSource _startupUpdateCancellation = new();
     private Task _startupUpdateTask = Task.CompletedTask;
     private readonly HelpAboutPage _helpPage;
+    private readonly ScheduledTasksPage _scheduledTasksPage;
+    private readonly IScheduledTaskService _scheduledTaskService;
+    private readonly ScheduleCoordinator _scheduleCoordinator;
+    private readonly Func<ScheduledTaskEditDialog> _scheduledTaskDialogFactory;
+    private readonly Dictionary<int, int> _scheduledRunByScriptId = new();
 
     public MainViewModel ViewModel { get; }
 
@@ -113,6 +118,7 @@ public sealed partial class MainWindow : Window
 
     public string NavScriptsText => _localization["Nav_Scripts"];
     public string NavRunsText => _localization["Nav_Runs"];
+    public string NavSchedulesText => _localization["Nav_Schedules"];
     public string NavSettingsText => _localization["Nav_Settings"];
     public string NavHelpText => _localization["Nav_Help"];
     public string EditText => _localization["Button_Edit"];
@@ -143,7 +149,11 @@ public sealed partial class MainWindow : Window
         RunHistoryViewModel historyViewModel,
         IShellNavigationService navigation,
         Func<HelpAboutPage> helpAboutPageFactory,
-        UpdateCheckCoordinator updateCoordinator)
+        UpdateCheckCoordinator updateCoordinator,
+        IScheduledTaskService scheduledTaskService,
+        ScheduleCoordinator scheduleCoordinator,
+        Func<ScheduledTasksPage> scheduledTasksPageFactory,
+        Func<ScheduledTaskEditDialog> scheduledTaskDialogFactory)
     {
         _scriptService = scriptService;
         _scriptPathService = scriptPathService;
@@ -159,6 +169,9 @@ public sealed partial class MainWindow : Window
         _historyViewModel = historyViewModel;
         _navigation = navigation;
         _updateCoordinator = updateCoordinator;
+        _scheduledTaskService = scheduledTaskService;
+        _scheduleCoordinator = scheduleCoordinator;
+        _scheduledTaskDialogFactory = scheduledTaskDialogFactory;
         ViewModel = viewModel;
 
         // Mica 系统背景（Phase C 交付 7）：Win11 呈现云母材质，Win10 自动回退纯色
@@ -169,6 +182,14 @@ public sealed partial class MainWindow : Window
         _helpPage = helpAboutPageFactory();
         _helpPage.SettingsRequested += OnHelpSettingsRequested;
         HelpPageHost.Content = _helpPage;
+        _scheduledTasksPage = scheduledTasksPageFactory();
+        ScheduledTasksHost.Content = _scheduledTasksPage;
+        _scheduledTasksPage.AddRequested += OnScheduleAddRequested;
+        _scheduledTasksPage.EditRequested += OnScheduleEditRequested;
+        _scheduledTasksPage.RunNowRequested += OnScheduleRunNowRequested;
+        _scheduledTasksPage.DeleteRequested += OnScheduleDeleteRequested;
+        _scheduledTasksPage.Changed += OnSchedulesChanged;
+        _scheduleCoordinator.TaskDue += OnScheduledTaskDue;
         _navigation.Navigated += OnShellNavigated;
 
         // 主题设置在首帧建立后立即应用；默认 Dark 保持升级前视觉。
@@ -222,6 +243,7 @@ public sealed partial class MainWindow : Window
         Sidebar.EditRequested += OnSidebarEdit;
         Sidebar.DeleteRequested += OnSidebarDelete;
         Sidebar.RunRequested += OnSidebarRun;
+        Sidebar.ScheduleRequested += OnSidebarSchedule;
         // Phase E 新增入口：记事本 / 收藏切换 / 手动刷新 / 空状态引导去设置
         Sidebar.NotebookRequested += OnSidebarNotebook;
         Sidebar.FavoriteToggleRequested += OnSidebarFavoriteToggle;
@@ -260,6 +282,7 @@ public sealed partial class MainWindow : Window
         RefreshSelectedScriptPresentation();
         RefreshLocalizedToolTips();
         _navigation.Navigate(ShellPage.Scripts);
+        _scheduleCoordinator.Start();
         ViewModel.SetLocalizedStatus("Status_Ready");
 
         if (_settingsService.Current.AutoRefreshScripts)
@@ -407,6 +430,8 @@ public sealed partial class MainWindow : Window
             RefreshSelectedScriptPresentation();
             if (HelpPageHost.Visibility == Visibility.Visible)
                 ShowHelpPage();
+            else if (ScheduledTasksHost.Visibility == Visibility.Visible)
+                ShowScheduledTasksPage();
             else if (RunsPage.Visibility == Visibility.Visible)
                 ShowRunsPage();
             else
@@ -430,6 +455,8 @@ public sealed partial class MainWindow : Window
 
     private void OnNavRunsClick(object sender, RoutedEventArgs e) => _navigation.Navigate(ShellPage.Runs);
 
+    private void OnNavSchedulesClick(object sender, RoutedEventArgs e) => _navigation.Navigate(ShellPage.ScheduledTasks);
+
     private void OnNavHelpClick(object sender, RoutedEventArgs e) => _navigation.Navigate(ShellPage.Help);
 
     private void OnShellNavigated(object? sender, ShellPage page)
@@ -438,6 +465,9 @@ public sealed partial class MainWindow : Window
         {
             case ShellPage.Runs:
                 ShowRunsPage();
+                break;
+            case ShellPage.ScheduledTasks:
+                ShowScheduledTasksPage();
                 break;
             case ShellPage.Help:
                 ShowHelpPage();
@@ -480,6 +510,7 @@ public sealed partial class MainWindow : Window
     private bool IsActiveNavigation(Button button) =>
         (button == NavScriptsButton && WorkArea.Visibility == Visibility.Visible && ScriptsPage.Visibility == Visibility.Visible) ||
         (button == NavRunsButton && WorkArea.Visibility == Visibility.Visible && RunsPage.Visibility == Visibility.Visible) ||
+        (button == NavSchedulesButton && ScheduledTasksHost.Visibility == Visibility.Visible) ||
         (button == NavHelpButton && HelpPageHost.Visibility == Visibility.Visible);
 
     private void RefreshButtonRestingVisuals()
@@ -499,6 +530,14 @@ public sealed partial class MainWindow : Window
                 ? Views.ThemeBrushes.Get("NavigationSelectedBrush", 0xFF30363A)
                 : transparent,
             WorkArea.Visibility == Visibility.Visible && RunsPage.Visibility == Visibility.Visible
+                ? Views.ThemeBrushes.Get("TextPrimaryBrush", 0xFFF0F2F4)
+                : Views.ThemeBrushes.Get("TextSecondaryBrush", 0xFFAAB2BC));
+        ApplyButtonVisual(
+            NavSchedulesButton,
+            ScheduledTasksHost.Visibility == Visibility.Visible
+                ? Views.ThemeBrushes.Get("NavigationSelectedBrush", 0xFF30363A)
+                : transparent,
+            ScheduledTasksHost.Visibility == Visibility.Visible
                 ? Views.ThemeBrushes.Get("TextPrimaryBrush", 0xFFF0F2F4)
                 : Views.ThemeBrushes.Get("TextSecondaryBrush", 0xFFAAB2BC));
         ApplyButtonVisual(SettingsButton, transparent, Views.ThemeBrushes.Get("TextSecondaryBrush", 0xFFAAB2BC));
@@ -648,6 +687,7 @@ public sealed partial class MainWindow : Window
         if (ScriptsPage == null || RunsPage == null) return;
         WorkArea.Visibility = Visibility.Visible;
         HelpPageHost.Visibility = Visibility.Collapsed;
+        ScheduledTasksHost.Visibility = Visibility.Collapsed;
         ScriptsPage.Visibility = Visibility.Visible;
         RunsPage.Visibility = Visibility.Collapsed;
         RefreshButtonRestingVisuals();
@@ -658,6 +698,7 @@ public sealed partial class MainWindow : Window
         if (ScriptsPage == null || RunsPage == null) return;
         WorkArea.Visibility = Visibility.Visible;
         HelpPageHost.Visibility = Visibility.Collapsed;
+        ScheduledTasksHost.Visibility = Visibility.Collapsed;
         ScriptsPage.Visibility = Visibility.Collapsed;
         RunsPage.Visibility = Visibility.Visible;
         RefreshButtonRestingVisuals();
@@ -667,8 +708,18 @@ public sealed partial class MainWindow : Window
     private void ShowHelpPage()
     {
         WorkArea.Visibility = Visibility.Collapsed;
+        ScheduledTasksHost.Visibility = Visibility.Collapsed;
         HelpPageHost.Visibility = Visibility.Visible;
         _helpPage.Refresh();
+        RefreshButtonRestingVisuals();
+    }
+
+    private void ShowScheduledTasksPage()
+    {
+        WorkArea.Visibility = Visibility.Collapsed;
+        HelpPageHost.Visibility = Visibility.Collapsed;
+        ScheduledTasksHost.Visibility = Visibility.Visible;
+        _scheduledTasksPage.Refresh();
         RefreshButtonRestingVisuals();
     }
 
@@ -874,6 +925,14 @@ public sealed partial class MainWindow : Window
         _historyViewModel.DetachLocalization();
         _helpPage.SettingsRequested -= OnHelpSettingsRequested;
         _helpPage.Dispose();
+        _scheduledTasksPage.AddRequested -= OnScheduleAddRequested;
+        _scheduledTasksPage.EditRequested -= OnScheduleEditRequested;
+        _scheduledTasksPage.RunNowRequested -= OnScheduleRunNowRequested;
+        _scheduledTasksPage.DeleteRequested -= OnScheduleDeleteRequested;
+        _scheduledTasksPage.Changed -= OnSchedulesChanged;
+        _scheduledTasksPage.Dispose();
+        _scheduleCoordinator.TaskDue -= OnScheduledTaskDue;
+        _scheduleCoordinator.Dispose();
         _navigation.Navigated -= OnShellNavigated;
         _watcher.Changed -= OnWatcherChanged;
         _scriptListViewModel.PropertyChanged -= OnListSelectionChanged;
@@ -1025,7 +1084,7 @@ public sealed partial class MainWindow : Window
     }
 
     /// <summary>懒创建标签：此刻才 new WebView2（启动/空工作区不建任何实例）。</summary>
-    private void CreateTab(TerminalSessionViewModel viewModel)
+    private void CreateTab(TerminalSessionViewModel viewModel, bool activate = true)
     {
         // 在导航前保存主题，使终端页面可通过查询参数使用正确首屏颜色，避免闪烁。
         viewModel.ApplyTheme(_isLightTheme);
@@ -1064,10 +1123,12 @@ public sealed partial class MainWindow : Window
 
         _tabSessions[tab] = viewModel;
         Tabs.TabItems.Add(tab);
-        Tabs.SelectedItem = tab;
+        if (activate || Tabs.SelectedItem == null)
+            Tabs.SelectedItem = tab;
         IdleTerminalTab.Visibility = Visibility.Collapsed;
         WorkspaceHint.Visibility = Visibility.Collapsed;
-        _navigation.Navigate(ShellPage.Scripts);
+        if (activate)
+            _navigation.Navigate(ShellPage.Scripts);
         if (_scriptService.GetById(viewModel.ScriptId) is { } script)
             TerminalCommandText.Text = BuildCommandPreview(script);
 
@@ -1217,6 +1278,13 @@ public sealed partial class MainWindow : Window
     {
         _scriptListViewModel.SetRunStatus(scriptId, status);
 
+        if (status is RunStatus.Success or RunStatus.Failed or RunStatus.Killed &&
+            _scheduledRunByScriptId.Remove(scriptId, out var scheduledTaskId))
+        {
+            _scheduledTaskService.SetLastResult(scheduledTaskId, RunStatusMapping.ToDbString(status));
+            _scheduledTasksPage.Refresh();
+        }
+
         // 历史面板（Phase E）：选中脚本的任一状态广播后重读最近记录（含运行中条目）
         if (ViewModel.SelectedScript?.Id == scriptId)
         {
@@ -1264,6 +1332,115 @@ public sealed partial class MainWindow : Window
                 RunStatus.Killed => "Status_RunKilled",
                 _ => "Status_Initializing",
             });
+    }
+
+    private async void OnSidebarSchedule(object? sender, ScriptListItemViewModel item)
+    {
+        if (_dialogInFlight) return;
+        _dialogInFlight = true;
+        try
+        {
+            await DialogHostHelper.ShowAfterFlyoutDismissAsync(sender as DependencyObject);
+            await ShowScheduledTaskDialogAsync(item.Script, null);
+        }
+        catch (Exception ex) { DebugWriteUnexpected("SidebarSchedule", ex); }
+        finally { _dialogInFlight = false; }
+    }
+
+    private async void OnScheduleAddRequested(Script? script) => await OpenScheduledTaskDialogGuardedAsync(script, null);
+    private async void OnScheduleEditRequested(ScheduledTask task) => await OpenScheduledTaskDialogGuardedAsync(null, task);
+
+    private async Task OpenScheduledTaskDialogGuardedAsync(Script? script, ScheduledTask? task)
+    {
+        if (_dialogInFlight) return;
+        _dialogInFlight = true;
+        try { await ShowScheduledTaskDialogAsync(script, task); }
+        catch (Exception ex) { DebugWriteUnexpected("ScheduledTaskDialog", ex); }
+        finally { _dialogInFlight = false; }
+    }
+
+    private async Task ShowScheduledTaskDialogAsync(Script? script, ScheduledTask? task)
+    {
+        var dialog = _scheduledTaskDialogFactory();
+        PrepareDialog(dialog);
+        dialog.Prepare(script, task);
+        var result = await dialog.ShowAsync();
+        if (result != ContentDialogResult.Primary) return;
+        _scheduledTasksPage.Refresh();
+        _scheduleCoordinator.Rearm();
+        _navigation.Navigate(ShellPage.ScheduledTasks);
+    }
+
+    private async void OnScheduleDeleteRequested(ScheduledTask task)
+    {
+        if (_dialogInFlight) return;
+        _dialogInFlight = true;
+        try
+        {
+            var dialog = new ContentDialog
+            {
+                Title = _localization["Schedule_Delete_Title"],
+                Content = string.Format(_localization["Schedule_Delete_Content"], task.Name),
+                PrimaryButtonText = _localization["Menu_Delete"],
+                CloseButtonText = _localization["Button_Cancel"],
+                DefaultButton = ContentDialogButton.Close,
+            };
+            PrepareDialog(dialog);
+            if (await dialog.ShowAsync() == ContentDialogResult.Primary)
+            {
+                _scheduledTaskService.Delete(task.Id);
+                _scheduledTasksPage.Refresh();
+                _scheduleCoordinator.Rearm();
+            }
+        }
+        catch (Exception ex) { DebugWriteUnexpected("ScheduledTaskDelete", ex); }
+        finally { _dialogInFlight = false; }
+    }
+
+    private void OnSchedulesChanged() => _scheduleCoordinator.Rearm();
+    private void OnScheduledTaskDue(ScheduledTask task) => StartScheduledTask(task, updateLastResult: false);
+    private void OnScheduleRunNowRequested(ScheduledTask task) => StartScheduledTask(task, updateLastResult: true);
+
+    private void StartScheduledTask(ScheduledTask task, bool updateLastResult)
+    {
+        try
+        {
+            var script = task.ScriptId is int scriptId ? _scriptService.GetById(scriptId) : null;
+            if (script == null || !File.Exists(script.FilePath))
+            {
+                _scheduledTaskService.SetLastResult(task.Id, "missing");
+                _scheduledTaskService.SetEnabled(task.Id, false);
+                _scheduledTasksPage.Refresh();
+                _scheduleCoordinator.Rearm();
+                return;
+            }
+            if (_coordinator.IsRunning(script.Id))
+            {
+                _scheduledTaskService.SetLastResult(task.Id, "skipped");
+                _scheduledTasksPage.Refresh();
+                return;
+            }
+            var result = _coordinator.TryStart(script);
+            if (!result.IsSuccess)
+            {
+                _scheduledTaskService.SetLastResult(
+                    task.Id,
+                    result.ErrorKey == "Run_ScriptNotFound" ? "missing" : "failed");
+                _scheduledTasksPage.Refresh();
+                return;
+            }
+            if (updateLastResult)
+                _scheduledTaskService.SetLastResult(task.Id, "running");
+            _scheduledRunByScriptId[script.Id] = task.Id;
+            CreateTab(result.ViewModel!, activate: false);
+            _scheduledTasksPage.Refresh();
+        }
+        catch (Exception ex)
+        {
+            DebugWriteUnexpected("ScheduledTaskRun", ex);
+            try { _scheduledTaskService.SetLastResult(task.Id, "failed"); _scheduledTasksPage.Refresh(); }
+            catch (Exception nested) { DebugWriteUnexpected("ScheduledTaskRunResult", nested); }
+        }
     }
 
     /// <summary>

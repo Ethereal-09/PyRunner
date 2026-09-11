@@ -627,4 +627,41 @@
   <data name="Help_LicensePage" xml:space="preserve"><value>许可证</value></data>
   <data name="Help_OnlineResourcesUnavailable" xml:space="preserve"><value>发布地址尚未配置，在线资源与检查更新入口暂不显示。</value></data>
   <data name="Help_Copyright" xml:space="preserve"><value>© {0} PyRunner</value></data>
+  <data name="Nav_Schedules" xml:space="preserve"><value>定时任务</value></data>
+  <data name="Schedule_Title" xml:space="preserve"><value>定时任务</value></data>
+  <data name="Schedule_Add" xml:space="preserve"><value>新建任务</value></data>
+  <data name="Schedule_Edit" xml:space="preserve"><value>编辑定时任务</value></data>
+  <data name="Schedule_Empty" xml:space="preserve"><value>暂无定时任务。创建任务后，可在 PyRunner 打开期间自动运行脚本。</value></data>
+  <data name="Schedule_CreateForScript" xml:space="preserve"><value>创建定时任务…</value></data>
+  <data name="Schedule_RunNow" xml:space="preserve"><value>立即运行</value></data>
+  <data name="Schedule_Column_Script" xml:space="preserve"><value>任务 / 脚本</value></data>
+  <data name="Schedule_Column_Rule" xml:space="preserve"><value>执行规则</value></data>
+  <data name="Schedule_Column_Next" xml:space="preserve"><value>下次执行</value></data>
+  <data name="Schedule_Column_Result" xml:space="preserve"><value>上次结果</value></data>
+  <data name="Schedule_Type_Once" xml:space="preserve"><value>单次执行</value></data>
+  <data name="Schedule_Type_Daily" xml:space="preserve"><value>每天</value></data>
+  <data name="Schedule_Type_Weekly" xml:space="preserve"><value>每周</value></data>
+  <data name="Schedule_Type_Interval" xml:space="preserve"><value>固定间隔</value></data>
+  <data name="Schedule_Field_Name" xml:space="preserve"><value>任务名称</value></data>
+  <data name="Schedule_Field_Script" xml:space="preserve"><value>执行脚本</value></data>
+  <data name="Schedule_Field_Type" xml:space="preserve"><value>执行频率</value></data>
+  <data name="Schedule_Field_StartDate" xml:space="preserve"><value>开始日期</value></data>
+  <data name="Schedule_Field_Time" xml:space="preserve"><value>执行时间</value></data>
+  <data name="Schedule_Field_Weekdays" xml:space="preserve"><value>执行星期</value></data>
+  <data name="Schedule_Field_Interval" xml:space="preserve"><value>间隔分钟数</value></data>
+  <data name="Schedule_Field_Enabled" xml:space="preserve"><value>启用任务</value></data>
+  <data name="Schedule_Rule_Once" xml:space="preserve"><value>单次 · {0}</value></data>
+  <data name="Schedule_Rule_Daily" xml:space="preserve"><value>每天 · {0}</value></data>
+  <data name="Schedule_Rule_Weekly" xml:space="preserve"><value>{0} · {1}</value></data>
+  <data name="Schedule_Rule_Interval" xml:space="preserve"><value>每 {0} 分钟</value></data>
+  <data name="Schedule_Result_Skipped" xml:space="preserve"><value>已跳过（脚本正在运行）</value></data>
+  <data name="Schedule_Result_Missing" xml:space="preserve"><value>脚本不可用</value></data>
+  <data name="Schedule_Delete_Title" xml:space="preserve"><value>删除定时任务？</value></data>
+  <data name="Schedule_Delete_Content" xml:space="preserve"><value>“{0}”将不再自动执行。</value></data>
+  <data name="Schedule_Error_NameRequired" xml:space="preserve"><value>请输入任务名称。</value></data>
+  <data name="Schedule_Error_ScriptRequired" xml:space="preserve"><value>请选择可用脚本。</value></data>
+  <data name="Schedule_Error_TimeInvalid" xml:space="preserve"><value>请选择有效的日期和时间。</value></data>
+  <data name="Schedule_Error_WeekdayRequired" xml:space="preserve"><value>请至少选择一个星期。</value></data>
+  <data name="Schedule_Error_IntervalInvalid" xml:space="preserve"><value>执行间隔不能小于一分钟。</value></data>
+  <data name="Weekday_Sun" xml:space="preserve"><value>周日</value></data><data name="Weekday_Mon" xml:space="preserve"><value>周一</value></data><data name="Weekday_Tue" xml:space="preserve"><value>周二</value></data><data name="Weekday_Wed" xml:space="preserve"><value>周三</value></data><data name="Weekday_Thu" xml:space="preserve"><value>周四</value></data><data name="Weekday_Fri" xml:space="preserve"><value>周五</value></data><data name="Weekday_Sat" xml:space="preserve"><value>周六</value></data>
 </root>

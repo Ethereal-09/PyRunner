@@ -61,6 +61,7 @@ public sealed partial class FileTreeNodeViewModel : ObservableObject
 
     /// <summary>右键「运行」菜单文字（仅已登记 .py 节点注入，其余空串）。</summary>
     public string MenuRunText { get; set; } = string.Empty;
+    public string MenuScheduleText { get; set; } = string.Empty;
 
     /// <summary>右键「在记事本中打开」菜单文字（Phase E；仅 .py 节点注入）。</summary>
     public string MenuNotebookText { get; set; } = string.Empty;
@@ -197,6 +198,7 @@ public sealed partial class FileTreeViewModel : ObservableObject
 
     /// <summary>树节点右键「运行」菜单文字（PyFile 节点注入用）。</summary>
     public string MenuRunText => _localization["Menu_Run"];
+    public string MenuScheduleText => _localization["Schedule_CreateForScript"];
 
     /// <summary>树节点右键「在记事本中打开」菜单文字（Phase E）。</summary>
     public string MenuNotebookText => _localization["Menu_OpenInNotepad"];
@@ -275,6 +277,7 @@ public sealed partial class FileTreeViewModel : ObservableObject
                 FileTreeNodeKind.PyFile, s.Name, s.FilePath)
             {
                 MenuRunText = MenuRunText,
+                MenuScheduleText = MenuScheduleText,
                 MenuNotebookText = MenuNotebookText,
                 MenuFavoriteText = MenuRemoveFavoriteText,
                 IsRegistered = true,
@@ -501,6 +504,9 @@ public sealed partial class FileTreeViewModel : ObservableObject
         vm.Kind == FileTreeNodeKind.PyFile &&
         _scriptsByPath.ContainsKey(vm.FullPath);
 
+    public Script? FindRegisteredScript(string filePath) =>
+        _scriptsByPath.TryGetValue(filePath, out var script) ? script : null;
+
     /// <summary>节点是否展示右键「在记事本中打开」（Phase E）：任意 .py 文件节点。</summary>
     public bool CanOpenNotebookNode(object? nodeContent) =>
         nodeContent is FileTreeNodeViewModel vm && vm.Kind == FileTreeNodeKind.PyFile;
@@ -606,6 +612,7 @@ public sealed partial class FileTreeViewModel : ObservableObject
                     FileTreeNodeKind.PyFile, Path.GetFileName(file), file)
                 {
                     MenuRunText = MenuRunText,
+                    MenuScheduleText = registered ? MenuScheduleText : string.Empty,
                     MenuNotebookText = MenuNotebookText,
                     MenuFavoriteText = registered
                         ? (script!.IsFavorite ? MenuRemoveFavoriteText : MenuAddFavoriteText)

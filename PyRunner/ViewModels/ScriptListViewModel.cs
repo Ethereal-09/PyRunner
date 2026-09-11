@@ -36,6 +36,7 @@ public sealed partial class ScriptListItemViewModel : ObservableObject
     public string MenuEditText { get; set; } = string.Empty;
     public string MenuDeleteText { get; set; } = string.Empty;
     public string MenuRunText { get; set; } = string.Empty;
+    public string MenuScheduleText { get; set; } = string.Empty;
 
     /// <summary>右键「在记事本中打开」菜单文字（Phase E）。</summary>
     public string MenuNotebookText { get; set; } = string.Empty;
@@ -242,6 +243,7 @@ public sealed partial class ScriptListViewModel : ObservableObject
                     MenuEditText = _localization["Menu_Edit"],
                     MenuDeleteText = _localization["Menu_Delete"],
                     MenuRunText = _localization["Menu_Run"],
+                    MenuScheduleText = _localization["Schedule_CreateForScript"],
                     MenuNotebookText = _localization["Menu_OpenInNotepad"],
                     MenuFavoriteText = script.IsFavorite
                         ? _localization["Menu_RemoveFavorite"]

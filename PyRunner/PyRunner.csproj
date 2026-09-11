@@ -6,9 +6,9 @@
     <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
     <RootNamespace>PyRunner</RootNamespace>
     <AssemblyName>PyRunner</AssemblyName>
-    <Version>1.0.1</Version>
-    <AssemblyVersion>1.0.1.0</AssemblyVersion>
-    <FileVersion>1.0.1.283</FileVersion>
+    <Version>1.1.0</Version>
+    <AssemblyVersion>1.1.0.0</AssemblyVersion>
+    <FileVersion>1.1.0.284</FileVersion>
     <WindowsAppSdkVersion>1.5.250108004</WindowsAppSdkVersion>
     <ApplicationIcon>Assets\AppIcon.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
@@ -29,7 +29,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <AssemblyMetadata Include="BuildNumber" Value="283" />
+    <AssemblyMetadata Include="BuildNumber" Value="284" />
     <AssemblyMetadata Include="ReleaseChannel" Value="stable" />
     <AssemblyMetadata Include="WindowsAppSdkVersion" Value="$(WindowsAppSdkVersion)" />
     <AssemblyMetadata Include="AuthorAccount" Value="@Ethereal-09" />
@@ -72,6 +72,7 @@
          因此从 PRIResource 中排除，避免 PRI 重复处理。 -->
     <PRIResource Remove="Resources\**\*.resw" />
     <EmbeddedResource Include="Data\Migrations\001_initial.sql" />
+    <EmbeddedResource Include="Data\Migrations\002_scheduled_tasks.sql" />
     <EmbeddedResource Include="Resources\Strings.resw" LogicalName="PyRunner.Resources.Strings.resw" />
     <!-- MSBuild 会把文化目录名中的 '-' 转成 '_'，用 LogicalName 固定为 LocalizationService 期望的资源名 -->
     <EmbeddedResource Include="Resources\zh-CN\Strings.resw" LogicalName="PyRunner.Resources.zh-CN.Strings.resw" />

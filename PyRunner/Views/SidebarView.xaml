@@ -192,6 +192,7 @@
                             <Grid.ContextFlyout>
                                 <MenuFlyout Opening="OnTreeMenuOpening">
                                     <MenuFlyoutItem Text="{Binding Content.MenuRunText}" Click="OnMenuRunTreeClick" />
+                                    <MenuFlyoutItem Text="{Binding Content.MenuScheduleText}" Click="OnMenuScheduleTreeClick" />
                                     <MenuFlyoutItem Text="{Binding Content.MenuNotebookText}" Click="OnMenuNotebookTreeClick" />
                                     <MenuFlyoutItem Text="{Binding Content.MenuFavoriteText}" Click="OnMenuFavoriteTreeClick" />
                                 </MenuFlyout>
@@ -272,6 +273,7 @@
                                     <Button.Flyout>
                                         <MenuFlyout>
                                             <MenuFlyoutItem Text="{Binding MenuRunText}" Click="OnMenuRunClick" />
+                                            <MenuFlyoutItem Text="{Binding MenuScheduleText}" Click="OnMenuScheduleClick" />
                                             <MenuFlyoutItem Text="{Binding MenuEditText}" Click="OnMenuEditClick" />
                                             <MenuFlyoutItem Text="{Binding MenuNotebookText}" Click="OnMenuNotebookClick" />
                                             <MenuFlyoutItem Text="{Binding MenuFavoriteText}" Click="OnMenuFavoriteClick" />
@@ -295,6 +297,7 @@
                             <Grid.ContextFlyout>
                                 <MenuFlyout>
                                     <MenuFlyoutItem Text="{Binding MenuRunText}" Click="OnMenuRunClick" />
+                                    <MenuFlyoutItem Text="{Binding MenuScheduleText}" Click="OnMenuScheduleClick" />
                                     <MenuFlyoutItem Text="{Binding MenuEditText}" Click="OnMenuEditClick" />
                                     <MenuFlyoutItem Text="{Binding MenuNotebookText}" Click="OnMenuNotebookClick" />
                                     <MenuFlyoutItem Text="{Binding MenuFavoriteText}" Click="OnMenuFavoriteClick" />

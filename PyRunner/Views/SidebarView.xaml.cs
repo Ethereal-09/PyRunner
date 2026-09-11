@@ -4,6 +4,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Data;
 using PyRunner.Helpers;
+using PyRunner.Models;
 using PyRunner.ViewModels;
 
 namespace PyRunner.Views;
@@ -33,6 +34,7 @@ public sealed partial class SidebarView : UserControl
 
     /// <summary>「运行」请求（列表项右键/更多菜单；窗口接 RunCoordinator）。</summary>
     public event EventHandler<ScriptListItemViewModel>? RunRequested;
+    public event EventHandler<ScriptListItemViewModel>? ScheduleRequested;
 
     /// <summary>「在记事本中打开」请求（列表项右键/更多菜单，Phase E）。</summary>
     public event EventHandler<ScriptListItemViewModel>? NotebookRequested;
@@ -246,6 +248,15 @@ public sealed partial class SidebarView : UserControl
         }
     }
 
+    private void OnMenuScheduleClick(object sender, RoutedEventArgs e)
+    {
+        if (MenuItemSource(sender) is { } item)
+        {
+            DialogHostHelper.CloseContainingFlyoutPopup(sender as DependencyObject);
+            ScheduleRequested?.Invoke(this, item);
+        }
+    }
+
     /// <summary>列表项右键/更多菜单「在记事本中打开」（Phase E）。</summary>
     private void OnMenuNotebookClick(object sender, RoutedEventArgs e)
     {
@@ -277,7 +288,10 @@ public sealed partial class SidebarView : UserControl
         flyout.Items.Clear();
 
         if (_treeViewModel?.CanRunNode(content) == true)
+        {
             flyout.Items.Add(MakeTreeMenuItem("Content.MenuRunText", OnMenuRunTreeClick));
+            flyout.Items.Add(MakeTreeMenuItem("Content.MenuScheduleText", OnMenuScheduleTreeClick));
+        }
         if (_treeViewModel?.CanOpenNotebookNode(content) == true)
             flyout.Items.Add(MakeTreeMenuItem("Content.MenuNotebookText", OnMenuNotebookTreeClick));
         if (_treeViewModel?.CanToggleFavoriteNode(content) == true)
@@ -299,6 +313,14 @@ public sealed partial class SidebarView : UserControl
         var content = ((sender as FrameworkElement)?.DataContext as TreeViewNode)?.Content;
         DialogHostHelper.CloseContainingFlyoutPopup(sender as DependencyObject);
         _treeViewModel?.OnMenuRun(content);
+    }
+
+    private void OnMenuScheduleTreeClick(object sender, RoutedEventArgs e)
+    {
+        var content = ((sender as FrameworkElement)?.DataContext as TreeViewNode)?.Content;
+        DialogHostHelper.CloseContainingFlyoutPopup(sender as DependencyObject);
+        if (content is FileTreeNodeViewModel node && _treeViewModel?.FindRegisteredScript(node.FullPath) is { } script)
+            ScheduleRequested?.Invoke(this, new ScriptListItemViewModel(script, RunStatus.NotRun, string.Empty));
     }
 
     /// <summary>树节点右键「在记事本中打开」（Phase E）。</summary>

@@ -87,6 +87,16 @@
                     PointerExited="OnNavButtonPointerExited"
                     Click="OnNavRunsClick" />
                 <Button
+                    x:Name="NavSchedulesButton"
+                    AutomationProperties.AutomationId="NavSchedulesButton"
+                    Content="{x:Bind NavSchedulesText, Mode=OneWay}"
+                    MinWidth="70" MinHeight="30" Padding="14,5" FontSize="12"
+                    Template="{StaticResource PyRunnerButtonTemplate}"
+                    Background="Transparent" Foreground="{ThemeResource TextSecondaryBrush}" BorderBrush="Transparent"
+                    PointerEntered="OnNavButtonPointerEntered" PointerPressed="OnNavButtonPointerPressed"
+                    PointerReleased="OnNavButtonPointerReleased" PointerExited="OnNavButtonPointerExited"
+                    Click="OnNavSchedulesClick" />
+                <Button
                     x:Name="SettingsButton"
                     AutomationProperties.AutomationId="TitleBarSettingsButton"
                     Content="{x:Bind NavSettingsText, Mode=OneWay}"
@@ -443,6 +453,11 @@
                     HorizontalContentAlignment="Stretch"
                     VerticalContentAlignment="Stretch"
                     IsNavigationStackEnabled="False"
+                    Visibility="Collapsed" />
+                <ContentControl
+                    x:Name="ScheduledTasksHost"
+                    HorizontalContentAlignment="Stretch"
+                    VerticalContentAlignment="Stretch"
                     Visibility="Collapsed" />
                 </Grid>
             </Border>
