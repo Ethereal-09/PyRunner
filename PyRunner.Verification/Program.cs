@@ -83,6 +83,22 @@ var appCode = File.ReadAllText(Path.Combine(sourceRoot, "App.xaml.cs"));
 var onboardingSource = File.ReadAllText(Path.Combine(sourceRoot, "Views", "OnboardingWindow.xaml"));
 var onboardingCode = File.ReadAllText(Path.Combine(sourceRoot, "Views", "OnboardingWindow.xaml.cs"));
 var onboardingDraftCode = File.ReadAllText(Path.Combine(sourceRoot, "Models", "OnboardingDraft.cs"));
+var onboardingCompletionStart = appCode.IndexOf("private async void OnOnboardingCompleted", StringComparison.Ordinal);
+var onboardingCompletionEnd = onboardingCompletionStart < 0
+    ? -1
+    : appCode.IndexOf("private void PersistOnboardingDraft", onboardingCompletionStart, StringComparison.Ordinal);
+var onboardingCompletionMarked = onboardingCompletionStart < 0
+    ? -1
+    : appCode.IndexOf("current.FirstRunCompleted = true", onboardingCompletionStart, StringComparison.Ordinal);
+var onboardingRestart = onboardingCompletionStart < 0
+    ? -1
+    : appCode.IndexOf("Process.Start(new ProcessStartInfo", onboardingCompletionStart, StringComparison.Ordinal);
+var onboardingClose = onboardingCompletionStart < 0
+    ? -1
+    : appCode.IndexOf("onboarding.AllowCloseAndClose();", onboardingCompletionStart, StringComparison.Ordinal);
+var onboardingExit = onboardingCompletionStart < 0
+    ? -1
+    : appCode.IndexOf("Exit();", onboardingCompletionStart, StringComparison.Ordinal);
 Verify(
     mainWindowSource.Contains("x:Name=\"TitleBarDragRegion\"", StringComparison.Ordinal) &&
     mainWindowCode.Contains("SetTitleBar(TitleBarDragRegion)", StringComparison.Ordinal) &&
@@ -108,12 +124,18 @@ Verify(
     appCode.Contains("LaunchInitialWindow()", StringComparison.Ordinal) &&
     appCode.Contains("settings.FirstRunCompleted && settings.FirstRunVersion >= CurrentOnboardingVersion", StringComparison.Ordinal) &&
     appCode.Contains("CreateAndActivateOnboardingWindow()", StringComparison.Ordinal) &&
-    appCode.Contains("current.FirstRunCompleted = true", StringComparison.Ordinal) &&
-    appCode.IndexOf("CreateAndActivateMainWindow();", appCode.IndexOf("OnOnboardingCompleted", StringComparison.Ordinal), StringComparison.Ordinal) <
-        appCode.IndexOf("current.FirstRunCompleted = true", appCode.IndexOf("OnOnboardingCompleted", StringComparison.Ordinal), StringComparison.Ordinal) &&
+    onboardingCompletionStart >= 0 &&
+    onboardingCompletionEnd > onboardingCompletionStart &&
+    onboardingCompletionMarked > onboardingCompletionStart &&
+    onboardingRestart > onboardingCompletionMarked &&
+    onboardingClose > onboardingRestart &&
+    onboardingExit > onboardingClose &&
+    onboardingExit < onboardingCompletionEnd &&
+    !appCode.Substring(onboardingCompletionStart, onboardingCompletionEnd - onboardingCompletionStart)
+        .Contains("CreateAndActivateMainWindow", StringComparison.Ordinal) &&
     !mainWindowCode.Contains("FirstRunWizard", StringComparison.Ordinal) &&
     !appCode.Contains("FirstRunWizard", StringComparison.Ordinal),
-    "main window is gated until onboarding completion and completion is marked only afterward");
+    "onboarding completion restarts into the gated main window in a fresh process");
 
 var projectSource = File.ReadAllText(Path.Combine(sourceRoot, "PyRunner.csproj"));
 var installerSource = File.ReadAllText(Path.Combine(FindSolutionRoot(), "Installer", "PyRunner.iss"));

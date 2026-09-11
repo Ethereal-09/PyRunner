@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -219,43 +220,67 @@ public partial class App : Application
         }
 
         var onboarding = _onboardingWindow;
+        try
+        {
+            var settings = Services.GetRequiredService<ISettingsService>();
+            settings.Update(current =>
+            {
+                current.FirstRunCompleted = true;
+                current.FirstRunVersion = CurrentOnboardingVersion;
+            });
+            settings.FlushOrThrow();
+
+            var executablePath = Environment.ProcessPath;
+            if (string.IsNullOrWhiteSpace(executablePath) || !File.Exists(executablePath))
+                throw new InvalidOperationException("无法确定 PyRunner 可执行文件路径");
+
+            // Windows App SDK 1.5 在同一进程内从独立引导 Window 切换到
+            // MainWindow 时会在 Microsoft.ui.xaml.dll 中触发原生访问冲突。
+            // 完成标记已落盘，因此由新进程通过正常启动门控直接创建主窗口。
+            using var restartedProcess = Process.Start(new ProcessStartInfo
+            {
+                FileName = executablePath,
+                WorkingDirectory = AppContext.BaseDirectory,
+                UseShellExecute = true,
+            });
+            if (restartedProcess == null)
+                throw new InvalidOperationException("无法重新启动 PyRunner");
+        }
+        catch (Exception ex)
+        {
+            _ = ex;
+            RollBackOnboardingCompletion();
+            _transitioningFromOnboarding = false;
+            onboarding.ShowCompletionError(
+                Services.GetRequiredService<ILocalizationService>()["Wizard_SaveFailed"]);
+#if DEBUG
+            DebugLog.WriteLine($"App: 完成引导后重启失败（{ex}）");
+#endif
+            return;
+        }
+
         onboarding.Completed -= OnOnboardingCompleted;
         onboarding.ExitRequested -= OnOnboardingExitRequested;
         onboarding.AllowCloseAndClose();
         _onboardingWindow = null;
         _window = null;
+        DisposeServicesOnce();
+        Exit();
+    }
 
-        Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread().TryEnqueue(() =>
+    private void RollBackOnboardingCompletion()
+    {
+        try
         {
-            try
+            var settings = Services.GetRequiredService<ISettingsService>();
+            settings.Update(current =>
             {
-                CreateAndActivateMainWindow();
-                if (_window == null) throw new InvalidOperationException("MainWindow was not created.");
-
-                var settings = Services.GetRequiredService<ISettingsService>();
-                settings.Update(current =>
-                {
-                    current.FirstRunCompleted = true;
-                    current.FirstRunVersion = CurrentOnboardingVersion;
-                });
-                settings.FlushOrThrow();
-            }
-            catch (Exception ex)
-            {
-                try
-                {
-                    var settings = Services.GetRequiredService<ISettingsService>();
-                    settings.Update(current =>
-                    {
-                        current.FirstRunCompleted = false;
-                        current.FirstRunVersion = 0;
-                    });
-                    settings.Flush();
-                }
-                catch { }
-                ShowStartupErrorAndExit(ex);
-            }
-        });
+                current.FirstRunCompleted = false;
+                current.FirstRunVersion = 0;
+            });
+            settings.Flush();
+        }
+        catch { }
     }
 
     private void PersistOnboardingDraft(OnboardingDraft draft)
