@@ -57,6 +57,9 @@ dotnet publish .\PyRunner\PyRunner.csproj -p:PublishProfile=win-x64 -p:Platform=
 受支持的 Inno Setup 6，仓库不分发其编译器。安装程序按当前用户安装，
 不需要管理员权限；卸载或覆盖升级不会删除 `%LOCALAPPDATA%\PyRunner` 中的用户数据库和设置。
 
+各版本的功能变化、修复和已知限制见 [CHANGELOG.md](CHANGELOG.md)。发布新版本时必须先更新
+`CHANGELOG.md`，并将对应版本内容同步到 GitHub Release 说明。
+
 ## 本地数据
 
 - 数据库与设置：`%LOCALAPPDATA%\PyRunner`
