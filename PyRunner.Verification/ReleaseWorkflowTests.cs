@@ -12,8 +12,10 @@ internal static class ReleaseWorkflowTests
         }
 
         var root = FindSolutionRoot();
-        var ci = await File.ReadAllTextAsync(Path.Combine(root, ".github", "workflows", "ci.yml"));
-        var release = await File.ReadAllTextAsync(Path.Combine(root, ".github", "workflows", "release.yml"));
+        var ci = NormalizeLineEndings(
+            await File.ReadAllTextAsync(Path.Combine(root, ".github", "workflows", "ci.yml")));
+        var release = NormalizeLineEndings(
+            await File.ReadAllTextAsync(Path.Combine(root, ".github", "workflows", "release.yml")));
 
         Verify(
             ci.Contains("permissions:\n  contents: read", StringComparison.Ordinal) &&
@@ -101,6 +103,10 @@ internal static class ReleaseWorkflowTests
         var end = source.IndexOf(endMarker, start + startMarker.Length, StringComparison.Ordinal);
         return end < 0 ? source[start..] : source[start..end];
     }
+
+    private static string NormalizeLineEndings(string source) =>
+        source.Replace("\r\n", "\n", StringComparison.Ordinal)
+              .Replace('\r', '\n');
 
     private static async Task<int> RunPowerShellAsync(string script, params string[] arguments)
     {
