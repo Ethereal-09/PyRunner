@@ -1,0 +1,390 @@
+name: PyRunner Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Stable version in canonical major.minor.patch form
+        required: true
+        type: string
+      simulate_pages_failure:
+        description: Fail after publishing the Release, before deploying Pages
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pyrunner-stable-release
+  cancel-in-progress: false
+
+env:
+  DOTNET_NOLOGO: "true"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "true"
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: "true"
+  UPDATE_MANIFEST_URL: https://ethereal-09.github.io/PyRunner/update.json
+
+jobs:
+  build-and-verify:
+    name: Build and verify release candidate
+    if: github.ref == 'refs/heads/main'
+    runs-on: windows-2025
+    timeout-minutes: 35
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up .NET from global.json
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+
+      - name: Validate version and extract release notes
+        id: release-metadata
+        shell: pwsh
+        env:
+          REQUESTED_VERSION: ${{ inputs.version }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ($env:REQUESTED_VERSION -cnotmatch '^[0-9]+\.[0-9]+\.[0-9]+$' -or
+              ([Version]$env:REQUESTED_VERSION).ToString(3) -cne $env:REQUESTED_VERSION) {
+            throw "Version must use canonical major.minor.patch form."
+          }
+
+          [xml]$project = Get-Content -LiteralPath .\PyRunner\PyRunner.csproj
+          $versions = @($project.Project.PropertyGroup.Version |
+            Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) })
+          if ($versions.Count -ne 1 -or ([string]$versions[0]).Trim() -cne $env:REQUESTED_VERSION) {
+            throw "The requested version must exactly match PyRunner.csproj."
+          }
+
+          $tag = "v$env:REQUESTED_VERSION"
+          $installerName = "PyRunner-Setup-$env:REQUESTED_VERSION-x64.exe"
+          & .\tools\release\Get-ChangelogReleaseNotes.ps1 `
+            -Version $env:REQUESTED_VERSION `
+            -ChangelogPath .\CHANGELOG.md `
+            -OutputPath .\artifacts\release-notes.txt
+
+          "version=$env:REQUESTED_VERSION" >> $env:GITHUB_OUTPUT
+          "tag=$tag" >> $env:GITHUB_OUTPUT
+          "installer-name=$installerName" >> $env:GITHUB_OUTPUT
+
+      - name: Locate Windows App SDK build tools
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
+          $installationPath = (& $vswhere -latest -products * -requires Microsoft.Component.MSBuild -property installationPath |
+            Select-Object -First 1).Trim()
+          if ([string]::IsNullOrWhiteSpace($installationPath)) {
+            throw 'Visual Studio with MSBuild was not found.'
+          }
+          $appxRoot = Join-Path $installationPath 'MSBuild\Microsoft\VisualStudio'
+          $appxPath = Get-ChildItem -LiteralPath $appxRoot -Directory -Filter 'v*' |
+            Sort-Object { [Version]$_.Name.Substring(1) } -Descending |
+            ForEach-Object { Join-Path $_.FullName 'AppxPackage' } |
+            Where-Object { Test-Path -LiteralPath (Join-Path $_ 'Microsoft.AppxPackage.Targets') -PathType Leaf } |
+            Select-Object -First 1
+          if (-not $appxPath) {
+            throw 'A valid AppxPackage MSBuild tools directory was not found.'
+          }
+          "AppxMSBuildToolsPath=$($appxPath.TrimEnd('\'))\" >> $env:GITHUB_ENV
+
+      - name: Restore locked dependencies
+        run: |
+          dotnet restore .\PyRunner\PyRunner.csproj --locked-mode -p:Platform=x64 -r win-x64
+          dotnet restore .\PyRunner.Verification\PyRunner.Verification.csproj --locked-mode -p:Platform=x64
+
+      - name: Build PyRunner (Release x64)
+        run: dotnet build .\PyRunner\PyRunner.csproj -c Release -p:Platform=x64 --no-restore
+
+      - name: Build and run complete verification
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $verificationOutput = Join-Path $env:RUNNER_TEMP 'PyRunner.Verification'
+          dotnet build .\PyRunner.Verification\PyRunner.Verification.csproj `
+            -c Debug -p:Platform=x64 --no-restore --output $verificationOutput
+          if ($LASTEXITCODE -ne 0) { throw 'Verification build failed.' }
+          dotnet (Join-Path $verificationOutput 'PyRunner.Verification.dll')
+          if ($LASTEXITCODE -ne 0) { throw 'Verification failed.' }
+
+      - name: Build unsigned x64 installer and SHA-256
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          & .\Installer\build-installer.ps1 -NoRestore
+
+      - name: Stage immutable release candidate
+        shell: pwsh
+        env:
+          INSTALLER_NAME: ${{ steps.release-metadata.outputs.installer-name }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $candidate = '.\artifacts\release-candidate'
+          New-Item -ItemType Directory -Path $candidate -Force | Out-Null
+          Copy-Item -LiteralPath ".\artifacts\installer\$env:INSTALLER_NAME" -Destination $candidate
+          Copy-Item -LiteralPath ".\artifacts\installer\$env:INSTALLER_NAME.sha256" -Destination $candidate
+          Copy-Item -LiteralPath '.\artifacts\release-notes.txt' -Destination $candidate
+
+      - name: Upload release candidate
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release-candidate-${{ github.run_id }}
+          path: artifacts/release-candidate
+          if-no-files-found: error
+          overwrite: true
+          retention-days: 7
+
+  publish-release:
+    name: Publish and verify stable Release
+    needs: build-and-verify
+    runs-on: windows-2025
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    outputs:
+      published-version: ${{ steps.metadata.outputs.version }}
+
+    steps:
+      - name: Checkout exact verified commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Download immutable release candidate
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
+        with:
+          name: release-candidate-${{ github.run_id }}
+          path: artifacts/local
+
+      - name: Validate remote release state
+        id: metadata
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REQUESTED_VERSION: ${{ inputs.version }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $version = $env:REQUESTED_VERSION
+          $tag = "v$version"
+          $installerName = "PyRunner-Setup-$version-x64.exe"
+
+          $releases = gh release list --repo $env:GITHUB_REPOSITORY --limit 100 `
+            --json tagName,isDraft,isPrerelease | ConvertFrom-Json
+          foreach ($candidate in $releases) {
+            if (-not $candidate.isDraft -and -not $candidate.isPrerelease -and
+                $candidate.tagName -cmatch '^v([0-9]+\.[0-9]+\.[0-9]+)$' -and
+                [Version]$Matches[1] -gt [Version]$version) {
+              throw "A newer stable Release already exists: $($candidate.tagName)."
+            }
+          }
+
+          $existingReleaseJson = gh release view $tag --repo $env:GITHUB_REPOSITORY `
+            --json tagName,isDraft,isPrerelease 2>$null
+          $releaseExists = $LASTEXITCODE -eq 0
+          $releaseIsDraft = $false
+          if ($releaseExists -and [int]$env:GITHUB_RUN_ATTEMPT -eq 1) {
+            throw "Release $tag already exists; refusing a duplicate first attempt."
+          }
+          if ($releaseExists) {
+            $existingRelease = $existingReleaseJson | ConvertFrom-Json
+            if ($existingRelease.isPrerelease) {
+              throw "Existing Release $tag is a prerelease and cannot be resumed."
+            }
+            $releaseIsDraft = [bool]$existingRelease.isDraft
+          }
+
+          "version=$version" >> $env:GITHUB_OUTPUT
+          "tag=$tag" >> $env:GITHUB_OUTPUT
+          "installer-name=$installerName" >> $env:GITHUB_OUTPUT
+          "release-exists=$($releaseExists.ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
+          "release-is-draft=$($releaseIsDraft.ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
+
+      - name: Create draft Release
+        if: steps.metadata.outputs.release-exists == 'false'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.metadata.outputs.tag }}
+          RELEASE_VERSION: ${{ steps.metadata.outputs.version }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          gh release create $env:RELEASE_TAG `
+            --repo $env:GITHUB_REPOSITORY `
+            --target $env:GITHUB_SHA `
+            --draft `
+            --title "PyRunner v$env:RELEASE_VERSION" `
+            --notes-file .\artifacts\local\release-notes.txt
+
+      - name: Upload exact Release assets
+        if: steps.metadata.outputs.release-exists == 'false' || steps.metadata.outputs.release-is-draft == 'true'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.metadata.outputs.tag }}
+          INSTALLER_NAME: ${{ steps.metadata.outputs.installer-name }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          gh release upload $env:RELEASE_TAG `
+            ".\artifacts\local\$env:INSTALLER_NAME" `
+            ".\artifacts\local\$env:INSTALLER_NAME.sha256" `
+            --repo $env:GITHUB_REPOSITORY --clobber
+
+      - name: Verify draft assets and publish stable Release
+        id: publication
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.metadata.outputs.tag }}
+          INSTALLER_NAME: ${{ steps.metadata.outputs.installer-name }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $release = gh release view $env:RELEASE_TAG --repo $env:GITHUB_REPOSITORY `
+            --json tagName,isDraft,isPrerelease,assets | ConvertFrom-Json
+          if ($release.tagName -cne $env:RELEASE_TAG -or $release.isPrerelease) {
+            throw 'Release identity or stability state is invalid.'
+          }
+          $expectedNames = @($env:INSTALLER_NAME, "$env:INSTALLER_NAME.sha256")
+          $actualNames = @($release.assets | ForEach-Object name)
+          if ($actualNames.Count -ne 2 -or
+              @($expectedNames | Where-Object { $actualNames -cnotcontains $_ }).Count -ne 0) {
+            throw "Release must contain exactly the installer and its SHA-256 asset."
+          }
+
+          git fetch --force origin "refs/tags/$env:RELEASE_TAG:refs/tags/$env:RELEASE_TAG"
+          $tagCommit = (git rev-list -n 1 $env:RELEASE_TAG).Trim()
+          if ($tagCommit -cne $env:GITHUB_SHA) {
+            throw "Release tag points to $tagCommit instead of the verified commit $env:GITHUB_SHA."
+          }
+
+          if ($release.isDraft) {
+            gh release edit $env:RELEASE_TAG --repo $env:GITHUB_REPOSITORY --draft=false --latest
+          }
+          $published = gh release view $env:RELEASE_TAG --repo $env:GITHUB_REPOSITORY `
+            --json tagName,isDraft,isPrerelease,publishedAt,url | ConvertFrom-Json
+          if ($published.isDraft -or $published.isPrerelease -or
+              $published.tagName -cne $env:RELEASE_TAG -or
+              [string]::IsNullOrWhiteSpace([string]$published.publishedAt)) {
+            throw 'Stable Release publication could not be confirmed.'
+          }
+          "published-at=$($published.publishedAt)" >> $env:GITHUB_OUTPUT
+
+      - name: Download and verify published assets
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.metadata.outputs.tag }}
+          RELEASE_VERSION: ${{ steps.metadata.outputs.version }}
+          INSTALLER_NAME: ${{ steps.metadata.outputs.installer-name }}
+          PUBLISHED_AT: ${{ steps.publication.outputs.published-at }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $remote = '.\artifacts\remote'
+          New-Item -ItemType Directory -Path $remote -Force | Out-Null
+          gh release download $env:RELEASE_TAG --repo $env:GITHUB_REPOSITORY `
+            --pattern $env:INSTALLER_NAME `
+            --pattern "$env:INSTALLER_NAME.sha256" `
+            --dir $remote
+
+          $release = gh release view $env:RELEASE_TAG --repo $env:GITHUB_REPOSITORY `
+            --json assets | ConvertFrom-Json
+          $remoteInstaller = Get-Item -LiteralPath "$remote\$env:INSTALLER_NAME"
+          $asset = @($release.assets | Where-Object name -CEQ $env:INSTALLER_NAME)
+          if ($asset.Count -ne 1 -or [long]$asset[0].size -ne $remoteInstaller.Length) {
+            throw 'Published installer asset count or size is invalid.'
+          }
+
+          $site = '.\artifacts\pages-site'
+          New-Item -ItemType Directory -Path $site -Force | Out-Null
+          Copy-Item -LiteralPath .\tools\release\pages-index.html -Destination "$site\index.html"
+
+          $existing = '.\artifacts\existing-update.json'
+          $handler = [Net.Http.HttpClientHandler]::new()
+          $handler.AllowAutoRedirect = $false
+          $client = [Net.Http.HttpClient]::new($handler)
+          $client.Timeout = [TimeSpan]::FromSeconds(30)
+          try {
+            $request = [Net.Http.HttpRequestMessage]::new([Net.Http.HttpMethod]::Get, $env:UPDATE_MANIFEST_URL)
+            $request.Headers.CacheControl = [Net.Http.Headers.CacheControlHeaderValue]::Parse('no-cache')
+            $response = $client.Send($request)
+            if ($response.StatusCode -eq [Net.HttpStatusCode]::OK) {
+              [IO.File]::WriteAllBytes($existing, $response.Content.ReadAsByteArrayAsync().GetAwaiter().GetResult())
+            }
+            elseif ($response.StatusCode -ne [Net.HttpStatusCode]::NotFound) {
+              throw "Current Pages manifest returned HTTP $([int]$response.StatusCode); refusing deployment."
+            }
+          }
+          finally {
+            $client.Dispose()
+            $handler.Dispose()
+          }
+
+          $arguments = @{
+            Version = $env:RELEASE_VERSION
+            PublishedAt = $env:PUBLISHED_AT
+            ReleaseNotesPath = '.\artifacts\local\release-notes.txt'
+            InstallerPath = ".\artifacts\local\$env:INSTALLER_NAME"
+            VerifiedRemoteInstallerPath = "$remote\$env:INSTALLER_NAME"
+            ChecksumPath = ".\artifacts\local\$env:INSTALLER_NAME.sha256"
+            VerifiedRemoteChecksumPath = "$remote\$env:INSTALLER_NAME.sha256"
+            OutputPath = "$site\update.json"
+          }
+          if (Test-Path -LiteralPath $existing -PathType Leaf) {
+            $arguments.ExistingManifestPath = $existing
+          }
+          & .\tools\release\New-UpdateManifest.ps1 @arguments
+
+      - name: Stage verified Pages content
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: update-pages-${{ github.run_id }}
+          path: artifacts/pages-site
+          if-no-files-found: error
+          overwrite: true
+          retention-days: 7
+
+  deploy-pages:
+    name: Deploy stable update manifest to Pages
+    needs: publish-release
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Download verified Pages content
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
+        with:
+          name: update-pages-${{ github.run_id }}
+          path: pages-site
+
+      - name: Simulate Pages deployment failure
+        if: inputs.simulate_pages_failure
+        run: |
+          echo "Intentional failure after Release publication; the previous Pages deployment remains active."
+          exit 1
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4
+        with:
+          path: pages-site
+
+      - name: Deploy Pages
+        id: deployment
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4

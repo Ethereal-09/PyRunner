@@ -28,7 +28,8 @@ public sealed record UpdateCheckResult(
     Uri? ReleasePageUri = null,
     string? ETag = null,
     DateTimeOffset? RateLimitResetAt = null,
-    bool FromCache = false)
+    bool FromCache = false,
+    DateTimeOffset? CheckedAtUtc = null)
 {
     public bool IsSuccessful => Status is UpdateCheckStatus.Latest or UpdateCheckStatus.UpdateAvailable;
 }

@@ -24,6 +24,8 @@ public partial class App : Application
     private bool _servicesDisposed;
     private const int CurrentOnboardingVersion = 1;
 
+    internal XamlRoot? CurrentXamlRoot => _window?.Content?.XamlRoot;
+
     /// <summary>全局服务容器（OnLaunched 前构造完成）。
     /// 保留具体类型 ServiceProvider：窗口关闭后 Dispose 级联释放 IDisposable 单例。</summary>
     public ServiceProvider Services { get; }
@@ -63,14 +65,12 @@ public partial class App : Application
             IssueTracker: new Uri("https://github.com/Ethereal-09/PyRunner/issues"),
             ReleasesPage: new Uri("https://github.com/Ethereal-09/PyRunner/releases"),
             AuthorHomepage: new Uri("https://github.com/Ethereal-09"),
-            UpdateFeed: new Uri("https://api.github.com/repos/Ethereal-09/PyRunner/releases/latest")));
+            UpdateFeed: new Uri("https://ethereal-09.github.io/PyRunner/update.json")));
         services.AddSingleton(_ =>
         {
-            var client = new HttpClient { Timeout = TimeSpan.FromSeconds(8) };
+            var client = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false })
+                { Timeout = TimeSpan.FromSeconds(8) };
             client.DefaultRequestHeaders.UserAgent.ParseAdd("PyRunner");
-            client.DefaultRequestHeaders.Accept.Add(
-                new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
-            client.DefaultRequestHeaders.Add("X-GitHub-Api-Version", "2022-11-28");
             return client;
         });
         services.AddSingleton(TimeProvider.System);
@@ -78,7 +78,18 @@ public partial class App : Application
             Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread()));
         services.AddSingleton<IClipboardService, ClipboardService>();
         services.AddSingleton<IExternalLinkService, ExternalLinkService>();
-        services.AddSingleton<IUpdateService, GitHubUpdateService>();
+        services.AddSingleton<GitHubPagesUpdateManifestService>();
+        services.AddSingleton<IUpdateService>(provider =>
+            provider.GetRequiredService<GitHubPagesUpdateManifestService>());
+        services.AddSingleton(_ => TrustedUpdateHttpClient.CreateDefault());
+        services.AddSingleton<IUpdateReleaseAssetService>(provider =>
+            provider.GetRequiredService<GitHubPagesUpdateManifestService>());
+        services.AddSingleton<IUpdatePackageDownloader, UpdatePackageDownloader>();
+        services.AddSingleton<IUpdatePackageVerifier, Sha256UpdatePackageVerifier>();
+        services.AddSingleton<IUpdateInstallConfirmationService, WinUiUpdateInstallConfirmationService>();
+        services.AddSingleton<IInstallerLauncher, InstallerLauncher>();
+        services.AddSingleton<IVerifiedUpdateInstaller, VerifiedUpdateInstaller>();
+        services.AddSingleton<IApplicationExitService, ApplicationExitService>();
         services.AddSingleton<IUpdateCacheStore, SettingsUpdateCacheStore>();
         services.AddSingleton<IUpdateStateStore, UpdateStateStore>();
         services.AddSingleton<UpdateCheckCoordinator>();
@@ -94,6 +105,7 @@ public partial class App : Application
 
         // 运行编排（Phase D）：窗口生命周期内单实例，协调全部运行中标签
         services.AddSingleton<RunCoordinator>();
+        services.AddSingleton<IUpdateInstallGuard, UpdateInstallGuard>();
 
         // ViewModel / 对话框（按次创建，避免状态串用）
         services.AddTransient<MainViewModel>();

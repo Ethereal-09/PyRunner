@@ -15,6 +15,21 @@ public sealed partial class HelpAboutViewModel : ObservableObject, IDisposable
     private readonly UpdateCheckCoordinator _updateCoordinator;
     private readonly IUpdateStateStore _updateState;
     private readonly ProductLinksOptions _links;
+    private readonly IUpdateReleaseAssetService _releaseAssets;
+    private readonly IUpdatePackageDownloader _packageDownloader;
+    private readonly IUpdatePackageVerifier _packageVerifier;
+    private readonly IUpdateInstallConfirmationService _installConfirmation;
+    private readonly IVerifiedUpdateInstaller _verifiedInstaller;
+    private readonly IApplicationExitService _applicationExit;
+    private readonly IUpdateInstallGuard _installGuard;
+    private readonly IUpdateLaunchAuthorization _launchAuthorization = new UpdateLaunchAuthorization();
+    private CancellationTokenSource? _downloadCancellation;
+    private CancellationTokenSource? _installCancellation;
+    private DownloadedUpdatePackage? _verifiedPackage;
+    private int _downloadActive;
+    private int _installActive;
+    private long _lifecycleGeneration;
+    private bool _installationLaunched;
     private bool _disposed;
 
     [ObservableProperty] private AppMetadata metadata = null!;
@@ -27,6 +42,8 @@ public sealed partial class HelpAboutViewModel : ObservableObject, IDisposable
     [ObservableProperty] private UpdateCheckResult? updateResult;
     [ObservableProperty] private UpdateCheckResult? lastSuccessfulUpdateResult;
     [ObservableProperty] private string operationMessage = string.Empty;
+    [ObservableProperty] private UpdateDownloadStatus updateDownloadStatus;
+    [ObservableProperty] private double updateDownloadProgress;
 
     public IRelayCommand<string> NavigateToSettingsCommand { get; }
     public IRelayCommand<string> ShowLocalHelpCommand { get; }
@@ -34,6 +51,9 @@ public sealed partial class HelpAboutViewModel : ObservableObject, IDisposable
     public IAsyncRelayCommand CopySoftwareInfoCommand { get; }
     public IAsyncRelayCommand CheckUpdatesCommand { get; }
     public IAsyncRelayCommand DownloadUpdateCommand { get; }
+    public IRelayCommand CancelUpdateDownloadCommand { get; }
+    public IAsyncRelayCommand InstallUpdateCommand { get; }
+    public IAsyncRelayCommand OpenReleasePageCommand { get; }
     public IAsyncRelayCommand<string> OpenExternalLinkCommand { get; }
 
     public event EventHandler<HelpSettingsSection>? SettingsNavigationRequested;
@@ -45,7 +65,14 @@ public sealed partial class HelpAboutViewModel : ObservableObject, IDisposable
         IExternalLinkService externalLinks,
         UpdateCheckCoordinator updateCoordinator,
         IUpdateStateStore updateState,
-        ProductLinksOptions links)
+        ProductLinksOptions links,
+        IUpdateReleaseAssetService releaseAssets,
+        IUpdatePackageDownloader packageDownloader,
+        IUpdatePackageVerifier packageVerifier,
+        IUpdateInstallConfirmationService installConfirmation,
+        IVerifiedUpdateInstaller verifiedInstaller,
+        IApplicationExitService applicationExit,
+        IUpdateInstallGuard installGuard)
     {
         _localization = localization;
         _metadataService = metadataService;
@@ -54,6 +81,13 @@ public sealed partial class HelpAboutViewModel : ObservableObject, IDisposable
         _updateCoordinator = updateCoordinator;
         _updateState = updateState;
         _links = links;
+        _releaseAssets = releaseAssets;
+        _packageDownloader = packageDownloader;
+        _packageVerifier = packageVerifier;
+        _installConfirmation = installConfirmation;
+        _verifiedInstaller = verifiedInstaller;
+        _applicationExit = applicationExit;
+        _installGuard = installGuard;
         metadata = _metadataService.GetSnapshot();
 
         NavigateToSettingsCommand = new RelayCommand<string>(NavigateToSettings);
@@ -61,7 +95,10 @@ public sealed partial class HelpAboutViewModel : ObservableObject, IDisposable
         CloseLocalHelpCommand = new RelayCommand(() => IsLocalHelpOpen = false);
         CopySoftwareInfoCommand = new AsyncRelayCommand(CopySoftwareInfoAsync, () => !IsCopyFeedbackVisible);
         CheckUpdatesCommand = new AsyncRelayCommand(CheckUpdatesAsync, () => !IsCheckingUpdates);
-        DownloadUpdateCommand = new AsyncRelayCommand(DownloadUpdateAsync, () => CanOpenDownload);
+        DownloadUpdateCommand = new AsyncRelayCommand(DownloadUpdateAsync, () => CanDownloadUpdate);
+        CancelUpdateDownloadCommand = new RelayCommand(CancelUpdateDownload, () => IsDownloadingUpdate);
+        InstallUpdateCommand = new AsyncRelayCommand(InstallUpdateAsync, () => CanInstallUpdate);
+        OpenReleasePageCommand = new AsyncRelayCommand(OpenReleasePageAsync, () => CanOpenDownload);
         OpenExternalLinkCommand = new AsyncRelayCommand<string>(OpenExternalLinkAsync);
 
         _localization.LanguageChanged += OnLanguageChanged;
@@ -103,7 +140,10 @@ public sealed partial class HelpAboutViewModel : ObservableObject, IDisposable
     public string OnlineResourcesUnavailable => L("Help_OnlineResourcesUnavailable");
     public string CopyrightText => string.Format(L("Help_Copyright"), DateTime.Now.Year);
     public string CheckUpdatesText => IsCheckingUpdates ? L("Help_CheckingUpdates") : L("Help_CheckUpdates");
-    public string DownloadUpdateText => L("Help_GoToDownload");
+    public string DownloadUpdateText => L("Help_DownloadUpdate");
+    public string CancelUpdateDownloadText => L("Help_CancelDownload");
+    public string InstallUpdateText => L("Help_InstallUpdate");
+    public string OpenReleasePageText => L("Help_GoToDownload");
     public string ReleaseNotesTitle => L("Help_UpdateNotesTitle");
 
     public bool CanCheckUpdates => _links.UpdateFeed is not null;
@@ -121,7 +161,17 @@ public sealed partial class HelpAboutViewModel : ObservableObject, IDisposable
     public string LicensePageText => L("Help_LicensePage");
 
     public bool ShowUpdateStatus => IsCheckingUpdates || UpdateResult is { Status: not UpdateCheckStatus.NotChecked };
-    public string UpdateStatusText => IsCheckingUpdates ? L("Help_CheckingUpdates") : FormatUpdateResult(UpdateResult);
+    public string UpdateStatusText
+    {
+        get
+        {
+            if (IsCheckingUpdates) return L("Help_CheckingUpdates");
+            var current = FormatUpdateResult(UpdateResult);
+            if (UpdateResult?.IsSuccessful != false || LastSuccessfulUpdateResult?.CheckedAtUtc is not { } checkedAt)
+                return current;
+            return string.Format(L("Help_UpdateLastSuccessful"), current, FormatPublishedDate(checkedAt));
+        }
+    }
     public UpdateCheckResult? DisplayedRelease =>
         UpdateResult?.IsSuccessful == true ? UpdateResult : LastSuccessfulUpdateResult;
     public bool ShowUpdateDetails => DisplayedRelease?.Status == UpdateCheckStatus.UpdateAvailable;
@@ -131,7 +181,28 @@ public sealed partial class HelpAboutViewModel : ObservableObject, IDisposable
         ? L("Help_UpdateNotesEmpty")
         : DisplayedRelease!.ReleaseNotes!;
     public bool CanOpenDownload =>
-        ShowUpdateDetails && GitHubUpdateService.IsAllowedReleaseUri(DisplayedRelease?.ReleasePageUri);
+        ShowUpdateDetails && GitHubPagesUpdateManifestService.IsAllowedReleaseUri(DisplayedRelease?.ReleasePageUri);
+    public bool IsDownloadingUpdate => UpdateDownloadStatus is
+        UpdateDownloadStatus.Resolving or UpdateDownloadStatus.Downloading or UpdateDownloadStatus.Verifying;
+    public bool CanDownloadUpdate => CanOpenDownload && !IsDownloadingUpdate &&
+        UpdateDownloadStatus != UpdateDownloadStatus.Ready;
+    public bool CanInstallUpdate => UpdateDownloadStatus == UpdateDownloadStatus.Ready &&
+        _verifiedPackage is { } package && CanOpenDownload &&
+        string.Equals(DisplayedRelease?.Version, package.Asset.Version, StringComparison.Ordinal) &&
+        DisplayedRelease?.ReleasePageUri == package.Asset.ReleasePageUri;
+    public bool ShowCancelUpdateDownload => IsDownloadingUpdate;
+    public bool ShowInstallUpdate => CanInstallUpdate;
+    public bool ShowDownloadProgress => IsDownloadingUpdate;
+    public string UpdateDownloadStatusText => UpdateDownloadStatus switch
+    {
+        UpdateDownloadStatus.Resolving => L("Help_UpdateResolving"),
+        UpdateDownloadStatus.Downloading => string.Format(L("Help_UpdateDownloading"), UpdateDownloadProgress),
+        UpdateDownloadStatus.Verifying => L("Help_UpdateVerifying"),
+        UpdateDownloadStatus.Ready => L("Help_UpdateReady"),
+        UpdateDownloadStatus.Cancelled => L("Help_UpdateDownloadCancelled"),
+        UpdateDownloadStatus.Failed => OperationMessage,
+        _ => string.Empty,
+    };
 
     public void Refresh()
     {
@@ -148,8 +219,15 @@ public sealed partial class HelpAboutViewModel : ObservableObject, IDisposable
         CheckUpdatesCommand.NotifyCanExecuteChanged();
     }
     partial void OnIsCopyFeedbackVisibleChanged(bool value) => CopySoftwareInfoCommand.NotifyCanExecuteChanged();
-    partial void OnUpdateResultChanged(UpdateCheckResult? value) => RaiseUpdateProperties();
+    partial void OnUpdateResultChanged(UpdateCheckResult? value)
+    {
+        InvalidatePackageIfReleaseChanged(value);
+        RaiseUpdateProperties();
+    }
     partial void OnLastSuccessfulUpdateResultChanged(UpdateCheckResult? value) => RaiseUpdateProperties();
+    partial void OnUpdateDownloadStatusChanged(UpdateDownloadStatus value) => RaiseDownloadProperties();
+    partial void OnUpdateDownloadProgressChanged(double value) => OnPropertyChanged(nameof(UpdateDownloadStatusText));
+    partial void OnOperationMessageChanged(string value) => OnPropertyChanged(nameof(UpdateDownloadStatusText));
 
     private void NavigateToSettings(string? section)
     {
@@ -213,15 +291,237 @@ public sealed partial class HelpAboutViewModel : ObservableObject, IDisposable
 
     private async Task DownloadUpdateAsync()
     {
-        var uri = DisplayedRelease?.ReleasePageUri;
-        if (uri is null || !GitHubUpdateService.IsAllowedReleaseUri(uri))
+        if (Interlocked.CompareExchange(ref _downloadActive, 1, 0) != 0) return;
+        var release = DisplayedRelease;
+        if (release is not { Status: UpdateCheckStatus.UpdateAvailable, Version: { } version, ReleasePageUri: { } uri } ||
+            !GitHubPagesUpdateManifestService.IsAllowedReleaseUri(uri))
         {
-            OperationMessage = L("Help_LinkOpenFailed");
+            OperationMessage = L("Help_UpdateInvalidReleaseData");
+            UpdateDownloadStatus = UpdateDownloadStatus.Failed;
+            Interlocked.Exchange(ref _downloadActive, 0);
             return;
         }
 
-        OperationMessage = await _externalLinks.OpenAsync(uri) ? string.Empty : L("Help_LinkOpenFailed");
+        if (_verifiedPackage is not null && !_packageDownloader.Delete(_verifiedPackage))
+        {
+            SetDownloadFailure(UpdatePackageError.FileSystem);
+            Interlocked.Exchange(ref _downloadActive, 0);
+            return;
+        }
+        _verifiedPackage = null;
+        _downloadCancellation?.Dispose();
+        _downloadCancellation = new CancellationTokenSource();
+        var cancellationToken = _downloadCancellation.Token;
+        OperationMessage = string.Empty;
+        UpdateDownloadProgress = 0;
+
+        try
+        {
+            UpdateDownloadStatus = UpdateDownloadStatus.Resolving;
+            var resolved = await _releaseAssets.ResolveAsync(version, uri, cancellationToken);
+            if (!resolved.Success || resolved.Asset is null)
+            {
+                SetDownloadFailure(resolved.Error);
+                return;
+            }
+
+            UpdateDownloadStatus = UpdateDownloadStatus.Downloading;
+            var progress = new Progress<UpdateDownloadProgress>(value => UpdateDownloadProgress = value.Percentage);
+            var downloaded = await _packageDownloader.DownloadAsync(resolved.Asset, progress, cancellationToken);
+            if (!downloaded.Success || downloaded.Package is null)
+            {
+                SetDownloadFailure(downloaded.Error);
+                return;
+            }
+
+            UpdateDownloadStatus = UpdateDownloadStatus.Verifying;
+            var refreshed = await _releaseAssets.ResolveAsync(version, uri, cancellationToken);
+            if (!refreshed.Success || refreshed.Asset is null)
+            {
+                SetDownloadFailure(_packageDownloader.Delete(downloaded.Package)
+                    ? refreshed.Error
+                    : UpdatePackageError.FileSystem);
+                return;
+            }
+            var verified = await _packageVerifier.VerifyAsync(downloaded.Package, refreshed.Asset, cancellationToken);
+            if (!verified.Success || verified.Package is null)
+            {
+                SetDownloadFailure(_packageDownloader.Delete(downloaded.Package)
+                    ? verified.Error
+                    : UpdatePackageError.FileSystem);
+                return;
+            }
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (_disposed || !IsCurrentDisplayedRelease(version, uri))
+            {
+                _packageDownloader.Delete(verified.Package);
+                if (!_disposed) SetDownloadFailure(UpdatePackageError.AssetChanged);
+                return;
+            }
+
+            _verifiedPackage = verified.Package;
+            UpdateDownloadProgress = 100;
+            UpdateDownloadStatus = UpdateDownloadStatus.Ready;
+            OperationMessage = string.Empty;
+        }
+        finally
+        {
+            Interlocked.Exchange(ref _downloadActive, 0);
+            RaiseDownloadProperties();
+        }
     }
+
+    private void CancelUpdateDownload() => _downloadCancellation?.Cancel();
+
+    private async Task OpenReleasePageAsync()
+    {
+        var uri = DisplayedRelease?.ReleasePageUri;
+        OperationMessage = uri is not null && GitHubPagesUpdateManifestService.IsAllowedReleaseUri(uri) &&
+                           await _externalLinks.OpenAsync(uri)
+            ? string.Empty
+            : L("Help_LinkOpenFailed");
+    }
+
+    private async Task InstallUpdateAsync()
+    {
+        if (Interlocked.CompareExchange(ref _installActive, 1, 0) != 0) return;
+        var package = _verifiedPackage;
+        if (package is null || UpdateDownloadStatus != UpdateDownloadStatus.Ready)
+        {
+            Interlocked.Exchange(ref _installActive, 0);
+            return;
+        }
+        _installCancellation?.Dispose();
+        _installCancellation = new CancellationTokenSource();
+        var cancellationToken = _installCancellation.Token;
+        var generation = Volatile.Read(ref _lifecycleGeneration);
+
+        try
+        {
+            if (_installGuard.HasActiveRuns)
+            {
+                OperationMessage = L("Help_UpdateActiveRuns");
+                return;
+            }
+            if (!await _installConfirmation.ConfirmAsync(package.Asset.Version, cancellationToken)) return;
+            if (!IsOperationCurrent(generation, cancellationToken)) return;
+
+            UpdateDownloadStatus = UpdateDownloadStatus.Verifying;
+            var refreshed = await _releaseAssets.ResolveAsync(
+                package.Asset.Version, package.Asset.ReleasePageUri, cancellationToken);
+            if (!IsOperationCurrent(generation, cancellationToken)) return;
+            if (!refreshed.Success || refreshed.Asset is null)
+            {
+                _packageDownloader.Delete(package);
+                _verifiedPackage = null;
+                SetDownloadFailure(refreshed.Error);
+                return;
+            }
+
+            using var installLease = _installGuard.TryAcquire();
+            if (installLease is null)
+            {
+                UpdateDownloadStatus = UpdateDownloadStatus.Ready;
+                OperationMessage = L("Help_UpdateActiveRuns");
+                return;
+            }
+
+            var installed = await _verifiedInstaller.VerifyAndLaunchAsync(
+                package, refreshed.Asset, _launchAuthorization, cancellationToken);
+            if (!IsOperationCurrent(generation, cancellationToken)) return;
+            _verifiedPackage = installed.Package;
+            if (installed.Started)
+            {
+                _installationLaunched = true;
+                _applicationExit.Exit();
+                return;
+            }
+
+            switch (installed.Status)
+            {
+                case UpdateInstallStatus.LaunchFailed:
+                    UpdateDownloadStatus = UpdateDownloadStatus.Ready;
+                    OperationMessage = L("Help_UpdateLaunchFailed");
+                    break;
+                case UpdateInstallStatus.Cancelled:
+                    UpdateDownloadStatus = UpdateDownloadStatus.Cancelled;
+                    OperationMessage = L("Help_UpdateDownloadCancelled");
+                    break;
+                case UpdateInstallStatus.AssetChanged:
+                    FailInstallAndDelete(UpdatePackageError.AssetChanged);
+                    break;
+                case UpdateInstallStatus.SizeMismatch:
+                    FailInstallAndDelete(UpdatePackageError.SizeMismatch);
+                    break;
+                case UpdateInstallStatus.HashMismatch:
+                    FailInstallAndDelete(UpdatePackageError.HashMismatch);
+                    break;
+                case UpdateInstallStatus.UnsafePath:
+                    FailInstallAndDelete(UpdatePackageError.UnsafePath);
+                    break;
+                default:
+                    FailInstallAndDelete(UpdatePackageError.FileSystem);
+                    break;
+            }
+        }
+        finally
+        {
+            Interlocked.Exchange(ref _installActive, 0);
+            if (!_disposed) RaiseDownloadProperties();
+        }
+    }
+
+    private bool IsOperationCurrent(long generation, CancellationToken cancellationToken) =>
+        !_disposed && !cancellationToken.IsCancellationRequested &&
+        generation == Volatile.Read(ref _lifecycleGeneration);
+
+    private void FailInstallAndDelete(UpdatePackageError error)
+    {
+        var deleted = _packageDownloader.Delete(_verifiedPackage);
+        _verifiedPackage = null;
+        SetDownloadFailure(deleted ? error : UpdatePackageError.FileSystem);
+    }
+
+    private void SetDownloadFailure(UpdatePackageError error)
+    {
+        UpdateDownloadStatus = error == UpdatePackageError.Cancelled
+            ? UpdateDownloadStatus.Cancelled
+            : UpdateDownloadStatus.Failed;
+        OperationMessage = L(error switch
+        {
+            UpdatePackageError.MissingHash => "Help_UpdateMissingHash",
+            UpdatePackageError.InvalidHashFile => "Help_UpdateInvalidHashFile",
+            UpdatePackageError.HashMismatch => "Help_UpdateHashMismatch",
+            UpdatePackageError.SizeMismatch => "Help_UpdateSizeMismatch",
+            UpdatePackageError.AssetChanged => "Help_UpdateAssetChanged",
+            UpdatePackageError.UntrustedAddress => "Help_UpdateUntrustedAddress",
+            UpdatePackageError.UnsafePath => "Help_UpdateUnsafePath",
+            UpdatePackageError.FileTooLarge => "Help_UpdateFileTooLarge",
+            UpdatePackageError.Cancelled => "Help_UpdateDownloadCancelled",
+            UpdatePackageError.Timeout => "Help_UpdateDownloadTimeout",
+            UpdatePackageError.AssetNotFound or UpdatePackageError.InvalidRelease => "Help_UpdateInvalidAsset",
+            _ => "Help_UpdateDownloadFailed",
+        });
+    }
+
+    private void InvalidatePackageIfReleaseChanged(UpdateCheckResult? result)
+    {
+        if (_verifiedPackage is not { } package || result is null) return;
+        if (result.Status == UpdateCheckStatus.UpdateAvailable &&
+            string.Equals(result.Version, package.Asset.Version, StringComparison.Ordinal) &&
+            result.ReleasePageUri == package.Asset.ReleasePageUri)
+            return;
+        _packageDownloader.Delete(package);
+        _verifiedPackage = null;
+        UpdateDownloadStatus = UpdateDownloadStatus.None;
+        UpdateDownloadProgress = 0;
+    }
+
+    private bool IsCurrentDisplayedRelease(string version, Uri releasePageUri) =>
+        DisplayedRelease is { Status: UpdateCheckStatus.UpdateAvailable } current &&
+        string.Equals(current.Version, version, StringComparison.Ordinal) &&
+        current.ReleasePageUri == releasePageUri;
 
     private string FormatUpdateResult(UpdateCheckResult? result) => result?.Status switch
     {
@@ -286,6 +586,7 @@ public sealed partial class HelpAboutViewModel : ObservableObject, IDisposable
     {
         RaiseLocalizedProperties();
         RaiseUpdateProperties();
+        RaiseDownloadProperties();
     }
 
     private void RaiseUpdateProperties()
@@ -295,10 +596,26 @@ public sealed partial class HelpAboutViewModel : ObservableObject, IDisposable
             nameof(ShowUpdateStatus), nameof(UpdateStatusText), nameof(DisplayedRelease),
             nameof(ShowUpdateDetails), nameof(UpdateVersionText), nameof(UpdatePublishedText),
             nameof(UpdateReleaseNotes), nameof(CanOpenDownload), nameof(DownloadUpdateText),
-            nameof(ReleaseNotesTitle),
+            nameof(ReleaseNotesTitle), nameof(CanDownloadUpdate), nameof(CanInstallUpdate),
+            nameof(ShowInstallUpdate), nameof(OpenReleasePageText),
         })
             OnPropertyChanged(propertyName);
         DownloadUpdateCommand.NotifyCanExecuteChanged();
+        OpenReleasePageCommand.NotifyCanExecuteChanged();
+    }
+
+    private void RaiseDownloadProperties()
+    {
+        foreach (var propertyName in new[]
+        {
+            nameof(IsDownloadingUpdate), nameof(CanDownloadUpdate), nameof(CanInstallUpdate),
+            nameof(ShowCancelUpdateDownload), nameof(ShowInstallUpdate), nameof(ShowDownloadProgress),
+            nameof(UpdateDownloadStatusText), nameof(DownloadUpdateText), nameof(CancelUpdateDownloadText),
+            nameof(InstallUpdateText), nameof(OpenReleasePageText),
+        }) OnPropertyChanged(propertyName);
+        DownloadUpdateCommand.NotifyCanExecuteChanged();
+        CancelUpdateDownloadCommand.NotifyCanExecuteChanged();
+        InstallUpdateCommand.NotifyCanExecuteChanged();
     }
 
     private void RaiseLocalizedProperties()
@@ -322,8 +639,15 @@ public sealed partial class HelpAboutViewModel : ObservableObject, IDisposable
     public void Dispose()
     {
         if (_disposed) return;
+        _launchAuthorization.Cancel();
         _disposed = true;
+        Interlocked.Increment(ref _lifecycleGeneration);
         _localization.LanguageChanged -= OnLanguageChanged;
         _updateState.Changed -= OnUpdateStateChanged;
+        _downloadCancellation?.Cancel();
+        _installCancellation?.Cancel();
+        _downloadCancellation?.Dispose();
+        _installCancellation?.Dispose();
+        if (!_installationLaunched) _packageDownloader.Delete(_verifiedPackage);
     }
 }

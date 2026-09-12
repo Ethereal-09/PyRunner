@@ -25,6 +25,13 @@ internal static class HelpAboutViewModelTests
         var updates = new FakeUpdateService();
         var cache = new FakeCacheStore();
         var state = new UpdateStateStore();
+        var releaseAssets = new FakeReleaseAssetService();
+        var packageDownloader = new FakePackageDownloader();
+        var packageVerifier = new FakePackageVerifier();
+        var confirmation = new FakeConfirmation();
+        var launcher = new FakeVerifiedInstaller();
+        var applicationExit = new FakeApplicationExit();
+        var installGuard = new FakeInstallGuard();
         using var coordinator = new UpdateCheckCoordinator(updates, cache, state, TimeProvider.System);
         using var viewModel = new HelpAboutViewModel(
             localization,
@@ -35,7 +42,14 @@ internal static class HelpAboutViewModelTests
             state,
             new ProductLinksOptions(
                 ReleasesPage: new Uri("https://github.com/Ethereal-09/PyRunner/releases"),
-                UpdateFeed: new Uri("https://api.github.com/repos/Ethereal-09/PyRunner/releases/latest")));
+                UpdateFeed: new Uri("https://ethereal-09.github.io/PyRunner/update.json")),
+            releaseAssets,
+            packageDownloader,
+            packageVerifier,
+            confirmation,
+            launcher,
+            applicationExit,
+            installGuard);
 
         HelpSettingsSection? requestedSection = null;
         viewModel.SettingsNavigationRequested += (_, section) => requestedSection = section;
@@ -81,10 +95,57 @@ internal static class HelpAboutViewModelTests
             new Uri("https://github.com/Ethereal-09/PyRunner/releases/tag/v1.2.0"),
             "\"etag-download\"");
         await viewModel.CheckUpdatesCommand.ExecuteAsync(null);
+        packageVerifier.Error = UpdatePackageError.HashMismatch;
+        var firstDownload = viewModel.DownloadUpdateCommand.ExecuteAsync(null);
+        var duplicateDownload = viewModel.DownloadUpdateCommand.ExecuteAsync(null);
+        await Task.WhenAll(firstDownload, duplicateDownload);
+        Verify(packageDownloader.CallCount == 1 && !viewModel.CanInstallUpdate && launcher.CallCount == 0,
+            "duplicate download clicks share one operation and failed verification never enables launch");
+
+        packageVerifier.Error = UpdatePackageError.None;
         await viewModel.DownloadUpdateCommand.ExecuteAsync(null);
+        Verify(packageDownloader.CallCount == 2 && viewModel.CanInstallUpdate && launcher.CallCount == 0,
+            "successful retry enables install without launching before confirmation");
+
+        localization.SetLanguage("zh-CN");
+        Verify(viewModel.InstallUpdateText == "安装更新" && viewModel.UpdateDownloadStatusText == "更新已校验",
+            "language changes refresh ready-state update actions and status text");
+        localization.SetLanguage("en-US");
+
+        confirmation.Result = false;
+        await viewModel.InstallUpdateCommand.ExecuteAsync(null);
+        Verify(launcher.CallCount == 0 && applicationExit.CallCount == 0,
+            "user refusal never launches installer or exits application");
+
+        confirmation.Result = true;
+        launcher.Result = false;
+        installGuard.HasActiveRuns = true;
+        await viewModel.InstallUpdateCommand.ExecuteAsync(null);
+        Verify(launcher.CallCount == 0 && applicationExit.CallCount == 0,
+            "running scripts block update installation without terminating them");
+        installGuard.HasActiveRuns = false;
+        installGuard.DenyAcquire = true;
+        await viewModel.InstallUpdateCommand.ExecuteAsync(null);
+        Verify(launcher.CallCount == 0 && applicationExit.CallCount == 0,
+            "a script starting after confirmation prevents acquiring the install lease");
+        installGuard.DenyAcquire = false;
+        await viewModel.InstallUpdateCommand.ExecuteAsync(null);
+        Verify(launcher.CallCount == 1 && applicationExit.CallCount == 0 && viewModel.CanInstallUpdate,
+            "installer launch failure keeps PyRunner open and permits retry");
+
+        launcher.Result = true;
+        await viewModel.InstallUpdateCommand.ExecuteAsync(null);
+        Verify(launcher.CallCount == 2 && applicationExit.CallCount == 1,
+            "application exits only after verified installer launch succeeds");
+
+        await viewModel.OpenReleasePageCommand.ExecuteAsync(null);
         Verify(externalLinks.OpenedUris.Count == 1 &&
                externalLinks.OpenedUris[0].AbsoluteUri.EndsWith("/tag/v1.2.0", StringComparison.Ordinal),
-            "download command opens the validated GitHub HTTPS release page only");
+            "validated GitHub Release remains available as fallback");
+
+        state.Complete(new UpdateCheckResult(UpdateCheckStatus.Offline));
+        Verify(viewModel.UpdateStatusText.Contains("Last successful check:", StringComparison.Ordinal),
+            "failed update check displays the timestamped last successful result");
 
         state.Complete(updates.Result with
         {
@@ -104,7 +165,32 @@ internal static class HelpAboutViewModelTests
         Verify(ReferenceEquals(viewModel.UpdateResult, resultBeforeDispose),
             "disposed help view model no longer receives update-state notifications");
 
+        var lifecycleState = new UpdateStateStore();
+        var lifecycleUpdates = new FakeUpdateService { Result = updates.Result };
+        using var lifecycleCoordinator = new UpdateCheckCoordinator(
+            lifecycleUpdates, new FakeCacheStore(), lifecycleState, TimeProvider.System);
+        var lifecycleInstaller = new FakeVerifiedInstaller { BlockUntilCancelled = true };
+        var lifecycleExit = new FakeApplicationExit();
+        var lifecycleConfirmation = new FakeConfirmation { Result = true };
+        var lifecycleViewModel = new HelpAboutViewModel(
+            new FakeLocalization(), new FakeMetadata(), new FakeClipboard(), new FakeExternalLinks(),
+            lifecycleCoordinator, lifecycleState,
+            new ProductLinksOptions(
+                ReleasesPage: new Uri("https://github.com/Ethereal-09/PyRunner/releases"),
+                UpdateFeed: new Uri("https://ethereal-09.github.io/PyRunner/update.json")),
+            new FakeReleaseAssetService(), new FakePackageDownloader(), new FakePackageVerifier(),
+            lifecycleConfirmation, lifecycleInstaller, lifecycleExit, new FakeInstallGuard());
+        lifecycleState.Complete(lifecycleUpdates.Result);
+        await lifecycleViewModel.DownloadUpdateCommand.ExecuteAsync(null);
+        var closingInstall = lifecycleViewModel.InstallUpdateCommand.ExecuteAsync(null);
+        await lifecycleInstaller.Entered.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        lifecycleViewModel.Dispose();
+        await closingInstall;
+        Verify(lifecycleInstaller.CallCount == 1 && lifecycleExit.CallCount == 0,
+            "closing the page cancels final verification and never exits or launches afterward");
+
         return failures;
+
     }
 
     private sealed class FakeLocalization : ILocalizationService
@@ -130,8 +216,12 @@ internal static class HelpAboutViewModelTests
             "Help_FaqBody" => "FAQ body",
             "Help_UpdateLatest" => "Latest",
             "Help_UpdateAvailable" => "Available {0}",
+            "Help_UpdateOffline" => "Offline.",
+            "Help_UpdateLastSuccessful" => "{0} Last successful check: {1}.",
             "Help_UpdateVersion" => "Version: {0}",
             "Help_UpdatePublished" => "Published: {0}",
+            "Help_InstallUpdate" => CurrentLanguage.StartsWith("zh", StringComparison.OrdinalIgnoreCase) ? "安装更新" : "Install update",
+            "Help_UpdateReady" => CurrentLanguage.StartsWith("zh", StringComparison.OrdinalIgnoreCase) ? "更新已校验" : "Update verified",
             _ => key,
         };
 
@@ -200,5 +290,86 @@ internal static class HelpAboutViewModelTests
             _snapshot = _snapshot with { LastAttemptAtUtc = attemptedAtUtc };
         public void SaveSuccessfulResult(UpdateCheckCache result) =>
             _snapshot = _snapshot with { LastSuccessfulResult = result };
+    }
+
+    private sealed class FakeReleaseAssetService : IUpdateReleaseAssetService
+    {
+        public Task<UpdateAssetResult> ResolveAsync(string version, Uri releasePageUri, CancellationToken cancellationToken = default)
+        {
+            var asset = new UpdateReleaseAsset(
+                42, version, $"PyRunner-Setup-{version}-x64.exe", 4,
+                new Uri($"https://github.com/Ethereal-09/PyRunner/releases/download/v{version}/PyRunner-Setup-{version}-x64.exe"),
+                new string('A', 64), DateTimeOffset.Parse("2026-09-01T00:00:00Z"), releasePageUri);
+            return Task.FromResult(new UpdateAssetResult(true, asset));
+        }
+    }
+
+    private sealed class FakePackageDownloader : IUpdatePackageDownloader
+    {
+        public int CallCount { get; private set; }
+        public async Task<UpdatePackageResult> DownloadAsync(UpdateReleaseAsset asset, IProgress<UpdateDownloadProgress>? progress = null, CancellationToken cancellationToken = default)
+        {
+            CallCount++;
+            await Task.Delay(40, cancellationToken);
+            progress?.Report(new UpdateDownloadProgress(4, 4));
+            return new(true, new DownloadedUpdatePackage(asset, "fake.partial", 4));
+        }
+        public bool Delete(DownloadedUpdatePackage? package) => true;
+    }
+
+    private sealed class FakePackageVerifier : IUpdatePackageVerifier
+    {
+        public UpdatePackageError Error { get; set; }
+        public Task<UpdatePackageResult> VerifyAsync(DownloadedUpdatePackage package, UpdateReleaseAsset currentAsset, CancellationToken cancellationToken = default) =>
+            Task.FromResult(Error != UpdatePackageError.None
+                ? new UpdatePackageResult(false, Error: Error)
+                : package.Asset == currentAsset
+                ? new UpdatePackageResult(true, package with { FilePath = currentAsset.FileName })
+                : new UpdatePackageResult(false, Error: UpdatePackageError.AssetChanged));
+    }
+
+    private sealed class FakeConfirmation : IUpdateInstallConfirmationService
+    {
+        public bool Result { get; set; }
+        public Task<bool> ConfirmAsync(string version, CancellationToken cancellationToken = default) => Task.FromResult(Result);
+    }
+
+    private sealed class FakeVerifiedInstaller : IVerifiedUpdateInstaller
+    {
+        public int CallCount { get; private set; }
+        public bool Result { get; set; }
+        public bool BlockUntilCancelled { get; set; }
+        public TaskCompletionSource<bool> Entered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public async Task<UpdateInstallResult> VerifyAndLaunchAsync(
+            DownloadedUpdatePackage package,
+            UpdateReleaseAsset currentAsset,
+            IUpdateLaunchAuthorization authorization,
+            CancellationToken cancellationToken = default)
+        {
+            CallCount++;
+            Entered.TrySetResult(true);
+            if (BlockUntilCancelled)
+            {
+                try { await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken); }
+                catch (OperationCanceledException) { }
+                return new UpdateInstallResult(UpdateInstallStatus.Cancelled, package);
+            }
+            return new UpdateInstallResult(
+                Result ? UpdateInstallStatus.Started : UpdateInstallStatus.LaunchFailed, package);
+        }
+    }
+
+    private sealed class FakeApplicationExit : IApplicationExitService
+    {
+        public int CallCount { get; private set; }
+        public void Exit() => CallCount++;
+    }
+
+    private sealed class FakeInstallGuard : IUpdateInstallGuard
+    {
+        public bool HasActiveRuns { get; set; }
+        public bool DenyAcquire { get; set; }
+        public IUpdateInstallLease? TryAcquire() => HasActiveRuns || DenyAcquire ? null : new FakeLease();
+        private sealed class FakeLease : IUpdateInstallLease { public void Dispose() { } }
     }
 }

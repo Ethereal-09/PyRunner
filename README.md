@@ -3,6 +3,8 @@
 PyRunner 是一个本地 Windows Python 脚本管理器。它使用 WinUI 3 提供脚本目录自动导入、分类、搜索、收藏、解释器管理、运行历史、应用内定时任务、中英文界面和深浅主题，并通过 WebView2 + xterm.js + ConPTY 在应用内运行交互式脚本。
 
 > **发布状态：** 当前稳定版为 v1.1.0，安装包与校验文件通过 GitHub Releases 提供。
+> 规划中的应用更新清单地址为 `https://ethereal-09.github.io/PyRunner/update.json`；
+> 在仓库管理员启用并完成 GitHub Pages 验收前，该地址不代表已经上线可用。
 
 脚本从「设置」中配置的目录自动扫描，无需逐个新增。每次运行都有独立终端标签；切换标签会同步更新上方脚本信息和运行/停止状态。终端支持 `Ctrl+Shift+C` 复制、`Ctrl+Shift+V` 粘贴、鼠标右键粘贴以及普通 `Ctrl+C` 中断脚本。右上角按钮可在深色与浅色主题之间即时切换，语言仍在设置中选择。
 
@@ -60,6 +62,13 @@ dotnet publish .\PyRunner\PyRunner.csproj -p:PublishProfile=win-x64 -p:Platform=
 各版本的功能变化、修复和已知限制见 [CHANGELOG.md](CHANGELOG.md)。发布新版本时必须先更新
 `CHANGELOG.md`，并将对应版本内容同步到 GitHub Release 说明。
 
+更新清单格式见 [docs/update-manifest-v1.md](docs/update-manifest-v1.md)。稳定版通过独立的
+`.github/workflows/release.yml` 手动触发发布；它会验证版本和更新日志、构建安装包、创建草稿
+Release、上传并回下载核对资产，然后生成并部署 Pages 清单。普通 `.github/workflows/ci.yml`
+始终保持只读权限。该流程不依赖 `release: published` 二次触发；Pages 失败时 Release 可能已经
+公开，此时必须将状态记录为“Release 已发布、Pages 清单仍是上一稳定版”，修复 Pages 后才能
+宣布应用内更新可用。
+
 ## 本地数据
 
 - 数据库与设置：`%LOCALAPPDATA%\PyRunner`
@@ -70,7 +79,12 @@ dotnet publish .\PyRunner\PyRunner.csproj -p:PublishProfile=win-x64 -p:Platform=
 
 定时任务仅在 PyRunner 处于打开状态时触发；当前版本不会注册 Windows 任务计划，也不会在应用退出后后台运行。系统休眠期间错过的重复任务会在恢复后触发一次，然后继续计算下一次执行时间。
 
-脚本内容、脚本路径、Python 解释器路径、设置和运行历史默认只保存在本机。PyRunner 不上传这些数据。更新检测只匿名访问本仓库的 GitHub Releases `latest` API，并最多每24小时自动检查一次；手动检查会忽略本地时间缓存。应用不会自动下载或执行 Release 文件。
+脚本内容、脚本路径、Python 解释器路径、设置和运行历史默认只保存在本机。PyRunner 不上传这些数据。
+更新检测匿名读取本项目 GitHub Pages 上固定的 `update.json` 静态清单，不调用 GitHub REST API，
+并最多每 24 小时自动检查一次；手动检查会忽略本地时间缓存。仅在用户点击下载后，应用才从
+`Ethereal-09/PyRunner` 的 GitHub Release 下载清单指定的安装包。下载后会校验大小和 SHA-256，
+再次联网复核清单，并在用户确认前重新校验本地文件；应用不会把 SHA-256 当作代码签名，也不会
+静默安装或绕过 Windows 安全提示。
 
 ## 开源与安全
 

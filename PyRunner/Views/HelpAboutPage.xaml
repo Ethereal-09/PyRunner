@@ -360,15 +360,46 @@
                                         TextWrapping="Wrap"
                                         IsTextSelectionEnabled="True" />
                                 </ScrollViewer>
-                                <Button
-                                    AutomationProperties.AutomationId="HelpDownloadUpdateButton"
-                                    Content="{Binding DownloadUpdateText}"
-                                    HorizontalAlignment="Left"
-                                    Padding="16,7"
-                                    Background="{ThemeResource SecondaryButtonBrush}"
-                                    BorderBrush="{ThemeResource SecondaryButtonBorderBrush}"
-                                    Foreground="{ThemeResource SecondaryButtonForegroundBrush}"
-                                    Command="{Binding DownloadUpdateCommand}" />
+                                <ProgressBar
+                                    AutomationProperties.AutomationId="HelpUpdateDownloadProgress"
+                                    Minimum="0"
+                                    Maximum="100"
+                                    Value="{Binding UpdateDownloadProgress}"
+                                    HorizontalAlignment="Stretch"
+                                    Visibility="{Binding ShowDownloadProgress, Converter={StaticResource BoolToVisibility}}" />
+                                <TextBlock
+                                    Text="{Binding UpdateDownloadStatusText}"
+                                    Foreground="{ThemeResource TextSecondaryBrush}"
+                                    TextWrapping="Wrap"
+                                    Visibility="{Binding UpdateDownloadStatusText, Converter={StaticResource NonEmptyToVisibility}}" />
+                                <StackPanel Spacing="6" HorizontalAlignment="Left">
+                                    <Button
+                                        AutomationProperties.AutomationId="HelpDownloadUpdateButton"
+                                        Content="{Binding DownloadUpdateText}"
+                                        Padding="16,7"
+                                        Background="{ThemeResource SecondaryButtonBrush}"
+                                        BorderBrush="{ThemeResource SecondaryButtonBorderBrush}"
+                                        Foreground="{ThemeResource SecondaryButtonForegroundBrush}"
+                                        Command="{Binding DownloadUpdateCommand}"
+                                        Visibility="{Binding CanDownloadUpdate, Converter={StaticResource BoolToVisibility}}" />
+                                    <Button
+                                        AutomationProperties.AutomationId="HelpCancelUpdateDownloadButton"
+                                        Content="{Binding CancelUpdateDownloadText}"
+                                        Padding="16,7"
+                                        Command="{Binding CancelUpdateDownloadCommand}"
+                                        Visibility="{Binding ShowCancelUpdateDownload, Converter={StaticResource BoolToVisibility}}" />
+                                    <Button
+                                        AutomationProperties.AutomationId="HelpInstallUpdateButton"
+                                        Content="{Binding InstallUpdateText}"
+                                        Padding="16,7"
+                                        Command="{Binding InstallUpdateCommand}"
+                                        Visibility="{Binding ShowInstallUpdate, Converter={StaticResource BoolToVisibility}}" />
+                                    <Button
+                                        AutomationProperties.AutomationId="HelpOpenReleasePageButton"
+                                        Content="{Binding OpenReleasePageText}"
+                                        Padding="16,7"
+                                        Command="{Binding OpenReleasePageCommand}" />
+                                </StackPanel>
                             </StackPanel>
                         </StackPanel>
                     </Border>

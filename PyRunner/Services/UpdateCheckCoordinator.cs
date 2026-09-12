@@ -98,6 +98,8 @@ public sealed class UpdateCheckCoordinator : IDisposable
             _cache.SaveAttempt(now);
             var cached = _cache.Load().LastSuccessfulResult;
             result = await _updates.CheckLatestAsync(cached, lifetimeToken);
+            if (result.IsSuccessful)
+                result = result with { CheckedAtUtc = now };
 
             if (result.IsSuccessful &&
                 result.Version is not null &&

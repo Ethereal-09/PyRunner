@@ -187,6 +187,8 @@ Verify(
     installerBuildSource.Contains("$projectXml.Project.PropertyGroup.Version", StringComparison.Ordinal) &&
     installerBuildSource.Contains("/DAppVersion=$appVersion", StringComparison.Ordinal) &&
     installerBuildSource.Contains("PyRunner-Setup-$appVersion-x64.exe", StringComparison.Ordinal) &&
+    installerBuildSource.Contains("Get-FileHash", StringComparison.Ordinal) &&
+    installerBuildSource.Contains(".sha256", StringComparison.Ordinal) &&
     projectSource.Contains("CopyOpenSourceNoticesToPublish", StringComparison.Ordinal),
     "installer consumes the project version and published license notices without a hard-coded fallback");
 
@@ -274,7 +276,7 @@ var helpPageCode = File.ReadAllText(Path.Combine(sourceRoot, "Views", "HelpAbout
 var helpViewModelCode = File.ReadAllText(Path.Combine(sourceRoot, "ViewModels", "HelpAboutViewModel.cs"));
 var metadataCode = File.ReadAllText(Path.Combine(sourceRoot, "Services", "AppMetadataService.cs"));
 var clipboardCode = File.ReadAllText(Path.Combine(sourceRoot, "Services", "ClipboardService.cs"));
-var updateCode = File.ReadAllText(Path.Combine(sourceRoot, "Services", "GitHubUpdateService.cs"));
+var updateCode = File.ReadAllText(Path.Combine(sourceRoot, "Services", "GitHubPagesUpdateManifestService.cs"));
 var updateModelsCode = File.ReadAllText(Path.Combine(sourceRoot, "Models", "UpdateCheckModels.cs"));
 var updateCoordinatorCode = File.ReadAllText(Path.Combine(sourceRoot, "Services", "UpdateCheckCoordinator.cs"));
 var linkCode = File.ReadAllText(Path.Combine(sourceRoot, "Services", "ProductLinksOptions.cs"));
@@ -321,25 +323,37 @@ Verify(
     "copied diagnostics use build/runtime metadata without private paths or environment variables");
 
 Verify(
-    appCode.Contains("https://api.github.com/repos/Ethereal-09/PyRunner/releases/latest", StringComparison.Ordinal) &&
+    appCode.Contains("https://ethereal-09.github.io/PyRunner/update.json", StringComparison.Ordinal) &&
+    !appCode.Contains("api.github.com", StringComparison.Ordinal) &&
     appCode.Contains("https://github.com/Ethereal-09/PyRunner/releases", StringComparison.Ordinal) &&
     appCode.Contains("AuthorHomepage: new Uri(\"https://github.com/Ethereal-09\")", StringComparison.Ordinal) &&
     metadataCode.Contains("@Ethereal-09", StringComparison.Ordinal) &&
     projectSource.Contains("AuthorAccount\" Value=\"@Ethereal-09", StringComparison.Ordinal) &&
-    appCode.Contains("application/vnd.github+json", StringComparison.Ordinal) &&
-    appCode.Contains("X-GitHub-Api-Version", StringComparison.Ordinal) &&
+    updateCode.Contains("SupportedSchemaVersion = 1", StringComparison.Ordinal) &&
+    updateCode.Contains("application/json", StringComparison.Ordinal) &&
+    !updateCode.Contains("api.github.com", StringComparison.Ordinal) &&
     updateCoordinatorCode.Contains("TimeSpan.FromHours(24)", StringComparison.Ordinal) &&
     mainWindowCode.Contains("TimeSpan.FromSeconds(7)", StringComparison.Ordinal) &&
     mainWindowCode.Contains("UpdateCheckCoordinator", StringComparison.Ordinal) &&
     !mainWindowCode.Contains("HelpAboutViewModel", StringComparison.Ordinal),
-    "fixed GitHub endpoints, required headers, delayed startup check, and shared coordinator are wired");
+    "fixed Pages manifest endpoint, delayed startup check, and shared coordinator are wired");
 
 Verify(
     helpPageSource.Contains("HelpUpdateStatusPanel", StringComparison.Ordinal) &&
     helpPageSource.Contains("DownloadUpdateCommand", StringComparison.Ordinal) &&
+    helpPageSource.Contains("HelpUpdateDownloadProgress", StringComparison.Ordinal) &&
+    helpPageSource.Contains("HelpCancelUpdateDownloadButton", StringComparison.Ordinal) &&
+    helpPageSource.Contains("HelpInstallUpdateButton", StringComparison.Ordinal) &&
+    helpPageSource.Contains("HelpOpenReleasePageButton", StringComparison.Ordinal) &&
     helpPageSource.Contains("OpenExternalLinkCommand", StringComparison.Ordinal) &&
     helpPageSource.Contains("CommandParameter=\"Releases\"", StringComparison.Ordinal),
     "existing help page exposes the incremental update status and release actions");
+
+var runCoordinatorCode = File.ReadAllText(Path.Combine(sourceRoot, "Services", "RunCoordinator.cs"));
+Verify(
+    runCoordinatorCode.Contains("TryAcquireUpdateInstallLease", StringComparison.Ordinal) &&
+    runCoordinatorCode.Contains("if (_updateInstallBlocked)", StringComparison.Ordinal),
+    "verified update installation atomically blocks new manual and scheduled script starts");
 
 Verify(
     settingsDialogSource.Contains("x:Name=\"ScriptPathsGroupTitle\"", StringComparison.Ordinal) &&
@@ -349,7 +363,7 @@ Verify(
 
 var artifactsRoot = Path.Combine(FindSolutionRoot(), "artifacts");
 var artifactPythonFiles = Directory.Exists(artifactsRoot)
-    ? Directory.EnumerateFiles(artifactsRoot, "*.py", SearchOption.AllDirectories)
+    ? EnumerateFilesIgnoringInaccessible(artifactsRoot, "*.py")
     : Enumerable.Empty<string>();
 Verify(
     !artifactPythonFiles.Any(path =>
@@ -360,6 +374,9 @@ Verify(
 
 failures += await HelpAboutViewModelTests.RunAsync();
 failures += await GitHubUpdateServiceTests.RunAsync();
+failures += await UpdatePackageServiceTests.RunAsync();
+failures += await UpdateManifestGeneratorTests.RunAsync();
+failures += await ReleaseWorkflowTests.RunAsync();
 failures += await JsonSettingsServiceTests.RunAsync();
 failures += await UpdateStateStoreTests.RunAsync();
 failures += ProductVersionParserTests.Run();
@@ -789,6 +806,18 @@ static string FindSolutionRoot()
     }
 
     throw new DirectoryNotFoundException("Could not locate PyRunner.sln");
+}
+
+static IEnumerable<string> EnumerateFilesIgnoringInaccessible(string root, string pattern)
+{
+    var options = new EnumerationOptions
+    {
+        IgnoreInaccessible = true,
+        RecurseSubdirectories = true,
+        ReturnSpecialDirectories = false
+    };
+
+    return Directory.EnumerateFiles(root, pattern, options);
 }
 
 static string? FindPythonExecutable()

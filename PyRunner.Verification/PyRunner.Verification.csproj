@@ -32,6 +32,7 @@
     <Compile Include="..\PyRunner\DebugLog.cs" Link="DebugLog.cs" />
     <Compile Include="..\PyRunner\Models\HelpSettingsSection.cs" Link="Models\HelpSettingsSection.cs" />
     <Compile Include="..\PyRunner\Models\UpdateCheckModels.cs" Link="Models\UpdateCheckModels.cs" />
+    <Compile Include="..\PyRunner\Models\UpdatePackageModels.cs" Link="Models\UpdatePackageModels.cs" />
     <Compile Include="..\PyRunner\Models\AppSettings.cs" Link="Models\AppSettings.cs" />
     <Compile Include="..\PyRunner\Services\ISettingsService.cs" Link="Services\ISettingsService.cs" />
     <Compile Include="..\PyRunner\Services\JsonSettingsService.cs" Link="Services\JsonSettingsService.cs" />
@@ -41,7 +42,13 @@
     <Compile Include="..\PyRunner\Services\IUpdateService.cs" Link="Services\IUpdateService.cs" />
     <Compile Include="..\PyRunner\Services\UpdateStateStore.cs" Link="Services\UpdateStateStore.cs" />
     <Compile Include="..\PyRunner\Services\UpdateCheckCoordinator.cs" Link="Services\UpdateCheckCoordinator.cs" />
-    <Compile Include="..\PyRunner\Services\GitHubUpdateService.cs" Link="Services\GitHubUpdateService.cs" />
+    <Compile Include="..\PyRunner\Services\GitHubPagesUpdateManifestService.cs" Link="Services\GitHubPagesUpdateManifestService.cs" />
+    <Compile Include="..\PyRunner\Services\IUpdatePackageServices.cs" Link="Services\IUpdatePackageServices.cs" />
+    <Compile Include="..\PyRunner\Services\TrustedUpdateHttpClient.cs" Link="Services\TrustedUpdateHttpClient.cs" />
+    <Compile Include="..\PyRunner\Services\UpdatePackageDownloader.cs" Link="Services\UpdatePackageDownloader.cs" />
+    <Compile Include="..\PyRunner\Services\Sha256UpdatePackageVerifier.cs" Link="Services\Sha256UpdatePackageVerifier.cs" />
+    <Compile Include="..\PyRunner\Services\UpdateCachePathGuard.cs" Link="Services\UpdateCachePathGuard.cs" />
+    <Compile Include="..\PyRunner\Services\VerifiedUpdateInstaller.cs" Link="Services\VerifiedUpdateInstaller.cs" />
     <Compile Include="..\PyRunner\ViewModels\HelpAboutViewModel.cs" Link="ViewModels\HelpAboutViewModel.cs" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.*" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.30" />

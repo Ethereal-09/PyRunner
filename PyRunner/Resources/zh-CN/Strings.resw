@@ -607,12 +607,13 @@
   <data name="Help_UpdateLatest" xml:space="preserve"><value>当前已是最新版本。</value></data>
   <data name="Help_UpdateAvailable" xml:space="preserve"><value>发现新版本 {0}。</value></data>
   <data name="Help_UpdateNoPublishedRelease" xml:space="preserve"><value>当前尚未发布正式稳定版。</value></data>
-  <data name="Help_UpdateRateLimited" xml:space="preserve"><value>GitHub API 请求已达限额，请稍后重试。</value></data>
-  <data name="Help_UpdateRateLimitedUntil" xml:space="preserve"><value>GitHub API 请求已达限额，请在 {0} 后重试。</value></data>
+  <data name="Help_UpdateRateLimited" xml:space="preserve"><value>更新清单服务暂时限制请求，请稍后重试。</value></data>
+  <data name="Help_UpdateRateLimitedUntil" xml:space="preserve"><value>更新清单服务暂时限制请求，请在 {0} 后重试。</value></data>
   <data name="Help_UpdateOffline" xml:space="preserve"><value>当前处于离线状态，无法检查更新。</value></data>
   <data name="Help_UpdateTimeout" xml:space="preserve"><value>检查更新超时，请稍后重试。</value></data>
-  <data name="Help_UpdateInvalidReleaseData" xml:space="preserve"><value>最新 Release 数据缺失或格式无效。</value></data>
+  <data name="Help_UpdateInvalidReleaseData" xml:space="preserve"><value>已发布的更新清单缺失或格式无效。</value></data>
   <data name="Help_UpdateFailed" xml:space="preserve"><value>暂时无法检查更新。</value></data>
+  <data name="Help_UpdateLastSuccessful" xml:space="preserve"><value>{0} 上次成功检查：{1}。</value></data>
   <data name="Help_UpdateError" xml:space="preserve"><value>暂时无法检查更新。</value></data>
   <data name="Help_UpdateVersion" xml:space="preserve"><value>版本：{0}</value></data>
   <data name="Help_UpdatePublished" xml:space="preserve"><value>发布日期：{0}</value></data>
@@ -627,6 +628,30 @@
   <data name="Help_LicensePage" xml:space="preserve"><value>许可证</value></data>
   <data name="Help_OnlineResourcesUnavailable" xml:space="preserve"><value>发布地址尚未配置，在线资源与检查更新入口暂不显示。</value></data>
   <data name="Help_Copyright" xml:space="preserve"><value>© {0} PyRunner</value></data>
+  <data name="Help_DownloadUpdate" xml:space="preserve"><value>下载更新</value></data>
+  <data name="Help_CancelDownload" xml:space="preserve"><value>取消下载</value></data>
+  <data name="Help_InstallUpdate" xml:space="preserve"><value>安装更新</value></data>
+  <data name="Help_UpdateResolving" xml:space="preserve"><value>正在读取已发布的更新清单…</value></data>
+  <data name="Help_UpdateDownloading" xml:space="preserve"><value>正在下载… {0:F0}%</value></data>
+  <data name="Help_UpdateVerifying" xml:space="preserve"><value>正在校验文件大小和 SHA-256…</value></data>
+  <data name="Help_UpdateReady" xml:space="preserve"><value>下载完成，文件大小和 SHA-256 与已发布清单一致。SHA-256 不是发布者签名。</value></data>
+  <data name="Help_UpdateDownloadCancelled" xml:space="preserve"><value>下载已取消。可以重试或前往 GitHub Release 下载。</value></data>
+  <data name="Help_UpdateDownloadFailed" xml:space="preserve"><value>更新下载失败。请重试或前往 GitHub Release 下载。</value></data>
+  <data name="Help_UpdateDownloadTimeout" xml:space="preserve"><value>更新请求超时。请重试或前往 GitHub Release 下载。</value></data>
+  <data name="Help_UpdateMissingHash" xml:space="preserve"><value>更新清单没有此安装包的有效 SHA-256，已禁止安装。</value></data>
+  <data name="Help_UpdateInvalidHashFile" xml:space="preserve"><value>发布的 SHA-256 文件格式无效，已禁止安装。</value></data>
+  <data name="Help_UpdateHashMismatch" xml:space="preserve"><value>下载文件与发布的 SHA-256 不一致，文件已删除。</value></data>
+  <data name="Help_UpdateSizeMismatch" xml:space="preserve"><value>下载文件大小与更新清单不一致，文件已删除。</value></data>
+  <data name="Help_UpdateAssetChanged" xml:space="preserve"><value>下载期间更新清单发生变化，文件已删除，请重试。</value></data>
+  <data name="Help_UpdateUntrustedAddress" xml:space="preserve"><value>清单包含不可信的下载地址，已禁止安装。</value></data>
+  <data name="Help_UpdateUnsafePath" xml:space="preserve"><value>更新缓存路径不安全或无法锁定，已禁止安装。</value></data>
+  <data name="Help_UpdateFileTooLarge" xml:space="preserve"><value>安装包超过 PyRunner 允许的更新大小。</value></data>
+  <data name="Help_UpdateInvalidAsset" xml:space="preserve"><value>更新清单未包含且仅包含约定的 Windows x64 安装包。</value></data>
+  <data name="Help_UpdateLaunchFailed" xml:space="preserve"><value>Windows 无法启动安装包，PyRunner 将保持打开。</value></data>
+  <data name="Help_UpdateActiveRuns" xml:space="preserve"><value>请先结束或停止所有运行中的脚本。PyRunner 不会为安装更新自动终止脚本。</value></data>
+  <data name="Help_UpdateInstallConfirmTitle" xml:space="preserve"><value>安装 PyRunner 更新？</value></data>
+  <data name="Help_UpdateInstallConfirmBody" xml:space="preserve"><value>是否安装 PyRunner {0}？安装包未签名，Windows 可能显示“未知发布者”或 SmartScreen 提示。请仅在信任此下载时继续。</value></data>
+  <data name="Run_UpdateInstallInProgress" xml:space="preserve"><value>正在准备已校验的更新，请等待完成后再运行脚本。</value></data>
   <data name="Nav_Schedules" xml:space="preserve"><value>定时任务</value></data>
   <data name="Schedule_Title" xml:space="preserve"><value>定时任务</value></data>
   <data name="Schedule_Add" xml:space="preserve"><value>新建任务</value></data>

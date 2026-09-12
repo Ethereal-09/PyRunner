@@ -48,6 +48,7 @@ public sealed class RunCoordinator
 
     /// <summary>运行中会话索引（ScriptId → ActiveRun）；同脚本禁止并发的真相源。</summary>
     private readonly Dictionary<int, ActiveRun> _activeByScriptId = new();
+    private bool _updateInstallBlocked;
 
     /// <summary>Restart 编排的一次性终结等待订阅（评审修 4）：Finalize 时完成。</summary>
     private sealed class ExitWaiter
@@ -76,12 +77,35 @@ public sealed class RunCoordinator
     /// <summary>查询某脚本是否正在运行。</summary>
     public bool IsRunning(int scriptId) => _activeByScriptId.ContainsKey(scriptId);
 
+    /// <summary>更新安装前只读检查；不得通过退出应用强制终止正在运行的脚本。</summary>
+    public bool HasActiveRuns => _activeByScriptId.Count != 0;
+
+    public IUpdateInstallLease? TryAcquireUpdateInstallLease()
+    {
+        if (_updateInstallBlocked || _activeByScriptId.Count != 0) return null;
+        _updateInstallBlocked = true;
+        return new UpdateInstallLease(this);
+    }
+
+    private sealed class UpdateInstallLease(RunCoordinator owner) : IUpdateInstallLease
+    {
+        private RunCoordinator? _owner = owner;
+        public void Dispose()
+        {
+            var current = Interlocked.Exchange(ref _owner, null);
+            if (current is not null) current._updateInstallBlocked = false;
+        }
+    }
+
     /// <summary>
     /// 启动一次运行。成功返回会话 VM（调用方据此创建标签并 InitializeAsync）；
     /// 失败返回错误键（调用方本地化展示），不抛业务异常。
     /// </summary>
     public TryStartResult TryStart(Script script)
     {
+        if (_updateInstallBlocked)
+            return new TryStartResult(null, "Run_UpdateInstallInProgress");
+
         // 1. 同脚本禁止并发
         if (_activeByScriptId.ContainsKey(script.Id))
             return new TryStartResult(null, "Run_AlreadyRunning");

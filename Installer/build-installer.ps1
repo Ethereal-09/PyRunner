@@ -1,7 +1,8 @@
 param(
     [string]$Configuration = 'Release',
     [string]$RuntimeIdentifier = 'win-x64',
-    [string]$InnoSetupCompiler
+    [string]$InnoSetupCompiler,
+    [switch]$NoRestore
 )
 
 $ErrorActionPreference = 'Stop'
@@ -48,13 +49,19 @@ if (Test-Path -LiteralPath $resolvedPublishDirectory) {
     Remove-Item -LiteralPath $resolvedPublishDirectory -Recurse -Force
 }
 
-dotnet publish $appProject `
-    -c $Configuration `
-    -r $RuntimeIdentifier `
-    --self-contained true `
-    -p:Platform=x64 `
-    -p:PublishSingleFile=false `
-    -o $publishDirectory
+$publishArguments = @(
+    'publish', $appProject,
+    '-c', $Configuration,
+    '-r', $RuntimeIdentifier,
+    '--self-contained', 'true',
+    '-p:Platform=x64',
+    '-p:PublishSingleFile=false',
+    '-o', $publishDirectory
+)
+if ($NoRestore) {
+    $publishArguments += '--no-restore'
+}
+dotnet @publishArguments
 if ($LASTEXITCODE -ne 0) { throw "PyRunner publish failed with exit code $LASTEXITCODE." }
 
 & $compiler "/DAppVersion=$appVersion" $installerScript
@@ -62,4 +69,11 @@ if ($LASTEXITCODE -ne 0) { throw "Installer compilation failed with exit code $L
 
 $installer = Join-Path $projectRoot "artifacts\installer\PyRunner-Setup-$appVersion-x64.exe"
 if (-not (Test-Path -LiteralPath $installer)) { throw "Installer was not generated: $installer" }
-Get-Item -LiteralPath $installer
+$installerItem = Get-Item -LiteralPath $installer
+$installerHash = (Get-FileHash -LiteralPath $installerItem.FullName -Algorithm SHA256).Hash
+$checksum = $installerItem.FullName + '.sha256'
+[IO.File]::WriteAllText(
+    $checksum,
+    "$installerHash  $($installerItem.Name)`n",
+    [Text.ASCIIEncoding]::new())
+Get-Item -LiteralPath $installerItem.FullName, $checksum

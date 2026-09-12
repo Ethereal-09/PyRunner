@@ -605,12 +605,13 @@
   <data name="Help_UpdateLatest" xml:space="preserve"><value>PyRunner is up to date.</value></data>
   <data name="Help_UpdateAvailable" xml:space="preserve"><value>Version {0} is available.</value></data>
   <data name="Help_UpdateNoPublishedRelease" xml:space="preserve"><value>No published stable release is available yet.</value></data>
-  <data name="Help_UpdateRateLimited" xml:space="preserve"><value>GitHub API rate limit reached. Try again later.</value></data>
-  <data name="Help_UpdateRateLimitedUntil" xml:space="preserve"><value>GitHub API rate limit reached. Try again after {0}.</value></data>
+  <data name="Help_UpdateRateLimited" xml:space="preserve"><value>The update manifest service is temporarily limiting requests. Try again later.</value></data>
+  <data name="Help_UpdateRateLimitedUntil" xml:space="preserve"><value>The update manifest service is temporarily limiting requests. Try again after {0}.</value></data>
   <data name="Help_UpdateOffline" xml:space="preserve"><value>Unable to check while offline.</value></data>
   <data name="Help_UpdateTimeout" xml:space="preserve"><value>The update check timed out. Try again later.</value></data>
-  <data name="Help_UpdateInvalidReleaseData" xml:space="preserve"><value>The latest Release data is incomplete or invalid.</value></data>
+  <data name="Help_UpdateInvalidReleaseData" xml:space="preserve"><value>The published update manifest is incomplete or invalid.</value></data>
   <data name="Help_UpdateFailed" xml:space="preserve"><value>Unable to check for updates right now.</value></data>
+  <data name="Help_UpdateLastSuccessful" xml:space="preserve"><value>{0} Last successful check: {1}.</value></data>
   <data name="Help_UpdateError" xml:space="preserve"><value>Unable to check for updates right now.</value></data>
   <data name="Help_UpdateVersion" xml:space="preserve"><value>Version: {0}</value></data>
   <data name="Help_UpdatePublished" xml:space="preserve"><value>Published: {0}</value></data>
@@ -625,6 +626,30 @@
   <data name="Help_LicensePage" xml:space="preserve"><value>License</value></data>
   <data name="Help_OnlineResourcesUnavailable" xml:space="preserve"><value>Online resources and update checking are unavailable until release URLs are configured.</value></data>
   <data name="Help_Copyright" xml:space="preserve"><value>© {0} PyRunner</value></data>
+  <data name="Help_DownloadUpdate" xml:space="preserve"><value>Download update</value></data>
+  <data name="Help_CancelDownload" xml:space="preserve"><value>Cancel download</value></data>
+  <data name="Help_InstallUpdate" xml:space="preserve"><value>Install update</value></data>
+  <data name="Help_UpdateResolving" xml:space="preserve"><value>Reading the published update manifest…</value></data>
+  <data name="Help_UpdateDownloading" xml:space="preserve"><value>Downloading… {0:F0}%</value></data>
+  <data name="Help_UpdateVerifying" xml:space="preserve"><value>Verifying file size and SHA-256…</value></data>
+  <data name="Help_UpdateReady" xml:space="preserve"><value>Download complete. The file size and SHA-256 match the published manifest. SHA-256 is not a publisher signature.</value></data>
+  <data name="Help_UpdateDownloadCancelled" xml:space="preserve"><value>Download cancelled. You can try again or open the GitHub Release.</value></data>
+  <data name="Help_UpdateDownloadFailed" xml:space="preserve"><value>The update could not be downloaded. Try again or open the GitHub Release.</value></data>
+  <data name="Help_UpdateDownloadTimeout" xml:space="preserve"><value>The update request timed out. Try again or open the GitHub Release.</value></data>
+  <data name="Help_UpdateMissingHash" xml:space="preserve"><value>The update manifest has no valid SHA-256 for this installer. Installation is disabled.</value></data>
+  <data name="Help_UpdateInvalidHashFile" xml:space="preserve"><value>The published SHA-256 file is invalid. Installation is disabled.</value></data>
+  <data name="Help_UpdateHashMismatch" xml:space="preserve"><value>The downloaded file does not match the published SHA-256. It was removed.</value></data>
+  <data name="Help_UpdateSizeMismatch" xml:space="preserve"><value>The downloaded file size does not match the update manifest. It was removed.</value></data>
+  <data name="Help_UpdateAssetChanged" xml:space="preserve"><value>The update manifest changed during download. The file was removed; please retry.</value></data>
+  <data name="Help_UpdateUntrustedAddress" xml:space="preserve"><value>The manifest contains an untrusted download address. Installation is disabled.</value></data>
+  <data name="Help_UpdateUnsafePath" xml:space="preserve"><value>The update cache path is unsafe or could not be secured. Installation is disabled.</value></data>
+  <data name="Help_UpdateFileTooLarge" xml:space="preserve"><value>The installer exceeds PyRunner's allowed update size.</value></data>
+  <data name="Help_UpdateInvalidAsset" xml:space="preserve"><value>The update manifest does not contain exactly one expected Windows x64 installer.</value></data>
+  <data name="Help_UpdateLaunchFailed" xml:space="preserve"><value>Windows could not start the installer. PyRunner will remain open.</value></data>
+  <data name="Help_UpdateActiveRuns" xml:space="preserve"><value>Finish or stop all running scripts before installing the update. PyRunner will not terminate them automatically.</value></data>
+  <data name="Help_UpdateInstallConfirmTitle" xml:space="preserve"><value>Install PyRunner update?</value></data>
+  <data name="Help_UpdateInstallConfirmBody" xml:space="preserve"><value>Install PyRunner {0}? The installer is unsigned, so Windows may show an Unknown publisher or SmartScreen warning. Continue only if you trust this download.</value></data>
+  <data name="Run_UpdateInstallInProgress" xml:space="preserve"><value>A verified update is being prepared. Wait for it to finish before running a script.</value></data>
   <data name="Nav_Schedules" xml:space="preserve"><value>Schedules</value></data>
   <data name="Schedule_Title" xml:space="preserve"><value>Scheduled tasks</value></data>
   <data name="Schedule_Add" xml:space="preserve"><value>New task</value></data>
