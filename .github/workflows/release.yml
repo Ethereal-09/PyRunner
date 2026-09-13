@@ -255,8 +255,10 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           $release = gh release view $env:RELEASE_TAG --repo $env:GITHUB_REPOSITORY `
-            --json tagName,isDraft,isPrerelease,assets | ConvertFrom-Json
-          if ($release.tagName -cne $env:RELEASE_TAG -or $release.isPrerelease) {
+            --json tagName,targetCommitish,isDraft,isPrerelease,assets | ConvertFrom-Json
+          if ($release.tagName -cne $env:RELEASE_TAG -or
+              $release.targetCommitish -cne $env:GITHUB_SHA -or
+              $release.isPrerelease) {
             throw 'Release identity or stability state is invalid.'
           }
           $expectedNames = @($env:INSTALLER_NAME, "$env:INSTALLER_NAME.sha256")
@@ -264,12 +266,6 @@ jobs:
           if ($actualNames.Count -ne 2 -or
               @($expectedNames | Where-Object { $actualNames -cnotcontains $_ }).Count -ne 0) {
             throw "Release must contain exactly the installer and its SHA-256 asset."
-          }
-
-          git fetch --force origin "refs/tags/${env:RELEASE_TAG}:refs/tags/${env:RELEASE_TAG}"
-          $tagCommit = (git rev-list -n 1 $env:RELEASE_TAG).Trim()
-          if ($tagCommit -cne $env:GITHUB_SHA) {
-            throw "Release tag points to $tagCommit instead of the verified commit $env:GITHUB_SHA."
           }
 
           if ($release.isDraft) {
@@ -281,6 +277,11 @@ jobs:
               $published.tagName -cne $env:RELEASE_TAG -or
               [string]::IsNullOrWhiteSpace([string]$published.publishedAt)) {
             throw 'Stable Release publication could not be confirmed.'
+          }
+          git fetch --force origin "refs/tags/${env:RELEASE_TAG}:refs/tags/${env:RELEASE_TAG}"
+          $tagCommit = (git rev-list -n 1 $env:RELEASE_TAG).Trim()
+          if ($tagCommit -cne $env:GITHUB_SHA) {
+            throw "Release tag points to $tagCommit instead of the verified commit $env:GITHUB_SHA."
           }
           "published-at=$($published.publishedAt)" >> $env:GITHUB_OUTPUT
 
