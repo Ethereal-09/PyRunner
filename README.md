@@ -2,7 +2,7 @@
 
 PyRunner 是一个本地 Windows Python 脚本管理器。它使用 WinUI 3 提供脚本目录自动导入、分类、搜索、收藏、解释器管理、运行历史、应用内定时任务、中英文界面和深浅主题，并通过 WebView2 + xterm.js + ConPTY 在应用内运行交互式脚本。
 
-> **发布状态：** 当前稳定版为 v1.1.0，安装包与校验文件通过 GitHub Releases 提供。
+> **发布状态：** 当前稳定版为 v1.2.0，安装包与校验文件通过 GitHub Releases 提供。
 > 规划中的应用更新清单地址为 `https://ethereal-09.github.io/PyRunner/update.json`；
 > 在仓库管理员启用并完成 GitHub Pages 验收前，该地址不代表已经上线可用。
 

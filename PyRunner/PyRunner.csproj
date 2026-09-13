@@ -6,9 +6,9 @@
     <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
     <RootNamespace>PyRunner</RootNamespace>
     <AssemblyName>PyRunner</AssemblyName>
-    <Version>1.1.0</Version>
-    <AssemblyVersion>1.1.0.0</AssemblyVersion>
-    <FileVersion>1.1.0.284</FileVersion>
+    <Version>1.2.0</Version>
+    <AssemblyVersion>1.2.0.0</AssemblyVersion>
+    <FileVersion>1.2.0.285</FileVersion>
     <WindowsAppSdkVersion>1.5.250108004</WindowsAppSdkVersion>
     <ApplicationIcon>Assets\AppIcon.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
@@ -29,7 +29,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <AssemblyMetadata Include="BuildNumber" Value="284" />
+    <AssemblyMetadata Include="BuildNumber" Value="285" />
     <AssemblyMetadata Include="ReleaseChannel" Value="stable" />
     <AssemblyMetadata Include="WindowsAppSdkVersion" Value="$(WindowsAppSdkVersion)" />
     <AssemblyMetadata Include="AuthorAccount" Value="@Ethereal-09" />

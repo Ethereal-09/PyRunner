@@ -8,6 +8,32 @@
 
 尚无未发布变更。
 
+## [1.2.0] - 2026-09-13
+
+### 新增
+
+- 新增完整的应用内更新流程，可在“帮助与关于”中下载、取消下载、校验并启动安装程序。
+- 新增下载进度、校验状态、失败原因和安装确认的中英文提示。
+- 新增 GitHub Pages 稳定版更新清单，以固定静态地址提供版本、发布说明、安装包大小和 SHA-256。
+- 新增独立的稳定版发布工作流，自动验证版本与更新日志、构建安装包、发布 Release、回下载核验资产并部署 Pages 清单。
+
+### 安全与行为
+
+- 更新下载仅接受 `Ethereal-09/PyRunner` 对应 Release 中约定名称的 Windows x64 安装包，并限制协议、主机、重定向、文件名和最大体积。
+- 下载完成后校验文件大小和 SHA-256；启动安装前重新读取在线清单并再次校验本地文件。
+- 更新缓存限制在 PyRunner 专用目录，拒绝目录穿越、重解析点和不安全文件路径。
+- 存在运行中的脚本时不会启动安装；安装必须由用户明确确认，且不会绕过 SmartScreen 或其他 Windows 安全提示。
+- SHA-256 仅用于完整性校验，不作为发布者身份或代码签名证明。
+
+### 验证
+
+- 新增更新清单、下载器、校验器、缓存路径、安装编排和发布工作流契约测试。
+- Release x64 构建、完整自动验证和 Vendor 哈希检查由发布工作流强制执行。
+
+### 已知限制
+
+- Windows 安装包暂未进行代码签名，启动安装程序时 Windows 可能显示“未知发布者”或 SmartScreen 提示。
+
 ## [1.1.0] - 2026-09-12
 
 ### 新增
@@ -44,7 +70,8 @@
 
 - PyRunner 首个正式稳定版本。
 
-[Unreleased]: https://github.com/Ethereal-09/PyRunner/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/Ethereal-09/PyRunner/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/Ethereal-09/PyRunner/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/Ethereal-09/PyRunner/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/Ethereal-09/PyRunner/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/Ethereal-09/PyRunner/releases/tag/v1.0.0
