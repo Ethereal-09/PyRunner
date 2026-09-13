@@ -194,15 +194,15 @@ jobs:
             }
           }
 
-          $existingReleaseJson = gh release view $tag --repo $env:GITHUB_REPOSITORY `
-            --json tagName,isDraft,isPrerelease 2>$null
-          $releaseExists = $LASTEXITCODE -eq 0
+          $existingRelease = $releases |
+            Where-Object { $_.tagName -ceq $tag } |
+            Select-Object -First 1
+          $releaseExists = $null -ne $existingRelease
           $releaseIsDraft = $false
           if ($releaseExists -and [int]$env:GITHUB_RUN_ATTEMPT -eq 1) {
             throw "Release $tag already exists; refusing a duplicate first attempt."
           }
           if ($releaseExists) {
-            $existingRelease = $existingReleaseJson | ConvertFrom-Json
             if ($existingRelease.isPrerelease) {
               throw "Existing Release $tag is a prerelease and cannot be resumed."
             }
