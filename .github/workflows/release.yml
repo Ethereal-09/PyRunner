@@ -266,7 +266,7 @@ jobs:
             throw "Release must contain exactly the installer and its SHA-256 asset."
           }
 
-          git fetch --force origin "refs/tags/$env:RELEASE_TAG:refs/tags/$env:RELEASE_TAG"
+          git fetch --force origin "refs/tags/${env:RELEASE_TAG}:refs/tags/${env:RELEASE_TAG}"
           $tagCommit = (git rev-list -n 1 $env:RELEASE_TAG).Trim()
           if ($tagCommit -cne $env:GITHUB_SHA) {
             throw "Release tag points to $tagCommit instead of the verified commit $env:GITHUB_SHA."
