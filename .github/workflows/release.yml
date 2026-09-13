@@ -89,6 +89,10 @@ jobs:
           }
           $appxRoot = Join-Path $installationPath 'MSBuild\Microsoft\VisualStudio'
           $appxPath = Get-ChildItem -LiteralPath $appxRoot -Directory -Filter 'v*' |
+            Where-Object {
+              $version = $null
+              [Version]::TryParse($_.Name.Substring(1), [ref]$version)
+            } |
             Sort-Object { [Version]$_.Name.Substring(1) } -Descending |
             ForEach-Object { Join-Path $_.FullName 'AppxPackage' } |
             Where-Object { Test-Path -LiteralPath (Join-Path $_ 'Microsoft.AppxPackage.Targets') -PathType Leaf } |
