@@ -76,6 +76,14 @@ var intervalNext = ScheduleCalculator.GetNextUtc(intervalTask, LocalUtc(2026, 9,
 Verify(intervalNext?.ToLocalTime().DateTime == new DateTime(2026, 9, 10, 10, 30, 0), "interval schedule advances from its stable anchor");
 
 var sourceRoot = Path.Combine(FindSolutionRoot(), "PyRunner");
+if (args.Contains("--p2-only", StringComparer.OrdinalIgnoreCase))
+{
+    return await P2FeatureTests.RunAsync(sourceRoot);
+}
+if (args.Contains("--p3-only", StringComparer.OrdinalIgnoreCase))
+{
+    return await AiAssistantFeatureTests.RunAsync();
+}
 var sidebarSource = File.ReadAllText(Path.Combine(sourceRoot, "Views", "SidebarView.xaml"));
 var sidebarCode = File.ReadAllText(Path.Combine(sourceRoot, "Views", "SidebarView.xaml.cs"));
 var mainWindowSource = File.ReadAllText(Path.Combine(sourceRoot, "MainWindow.xaml"));
@@ -83,6 +91,9 @@ var mainWindowCode = File.ReadAllText(Path.Combine(sourceRoot, "MainWindow.xaml.
 var runHistoryCode = File.ReadAllText(Path.Combine(sourceRoot, "ViewModels", "RunHistoryViewModel.cs"));
 var scheduledPageSource = File.ReadAllText(Path.Combine(sourceRoot, "Views", "ScheduledTasksPage.xaml"));
 var scheduledDialogSource = File.ReadAllText(Path.Combine(sourceRoot, "Views", "ScheduledTaskEditDialog.xaml"));
+var aiPageSource = File.ReadAllText(Path.Combine(sourceRoot, "Views", "AiAssistantPage.xaml"));
+var aiRendererHtml = File.ReadAllText(Path.Combine(sourceRoot, "AI", "wwwroot", "index.html"));
+var aiRendererScript = File.ReadAllText(Path.Combine(sourceRoot, "AI", "wwwroot", "renderer.js"));
 Verify(
     mainWindowSource.Contains("NavSchedulesButton", StringComparison.Ordinal) &&
     mainWindowSource.IndexOf("NavRunsButton", StringComparison.Ordinal) < mainWindowSource.IndexOf("NavSchedulesButton", StringComparison.Ordinal) &&
@@ -282,6 +293,23 @@ var updateCoordinatorCode = File.ReadAllText(Path.Combine(sourceRoot, "Services"
 var linkCode = File.ReadAllText(Path.Combine(sourceRoot, "Services", "ProductLinksOptions.cs"));
 var navigationCode = File.ReadAllText(Path.Combine(sourceRoot, "Services", "ShellNavigationService.cs"));
 Verify(
+    mainWindowSource.Contains("x:Name=\"NavAiButton\"", StringComparison.Ordinal) &&
+    mainWindowSource.IndexOf("x:Name=\"NavHelpButton\"", StringComparison.Ordinal) <
+        mainWindowSource.IndexOf("x:Name=\"NavAiButton\"", StringComparison.Ordinal) &&
+    mainWindowSource.Contains("x:Name=\"AiAssistantPageHost\"", StringComparison.Ordinal) &&
+    mainWindowCode.Contains("_navigation.Navigate(ShellPage.AiAssistant)", StringComparison.Ordinal) &&
+    navigationCode.Contains("AiAssistant", StringComparison.Ordinal) &&
+    aiPageSource.Contains("AiConversationMessages", StringComparison.Ordinal) &&
+    aiPageSource.Contains("AiPromptTextBox", StringComparison.Ordinal) &&
+    aiPageSource.Contains("AiModeSelector", StringComparison.Ordinal) &&
+    aiPageSource.Contains("AiPrimaryActionButton", StringComparison.Ordinal) &&
+    aiRendererHtml.Contains("Content-Security-Policy", StringComparison.Ordinal) &&
+    aiRendererHtml.Contains("default-src 'none'", StringComparison.Ordinal) &&
+    !aiRendererHtml.Contains("http://", StringComparison.OrdinalIgnoreCase) &&
+    !aiRendererScript.Contains("innerHTML", StringComparison.Ordinal) &&
+    aiRendererScript.Contains("textContent", StringComparison.Ordinal),
+    "AI has a top-level entry after Help and a dedicated explorer-and-interaction page");
+Verify(
     mainWindowSource.Contains("x:Name=\"NavHelpButton\"", StringComparison.Ordinal) &&
     mainWindowSource.Contains("x:Name=\"HelpPageHost\"", StringComparison.Ordinal) &&
     mainWindowSource.Contains("<Frame", StringComparison.Ordinal) &&
@@ -377,6 +405,9 @@ failures += await GitHubUpdateServiceTests.RunAsync();
 failures += await UpdatePackageServiceTests.RunAsync();
 failures += await UpdateManifestGeneratorTests.RunAsync();
 failures += await ReleaseWorkflowTests.RunAsync();
+failures += await DependencyFeatureTests.RunAsync();
+failures += await P2FeatureTests.RunAsync(sourceRoot);
+failures += await AiAssistantFeatureTests.RunAsync();
 failures += await JsonSettingsServiceTests.RunAsync();
 failures += await UpdateStateStoreTests.RunAsync();
 failures += ProductVersionParserTests.Run();
@@ -641,7 +672,7 @@ try
     using (var command = connection.CreateCommand())
     {
         command.CommandText = "SELECT COALESCE(MAX(Version), 0) FROM SchemaVersion;";
-        Verify(Convert.ToInt32(command.ExecuteScalar()) == 2, "schema migration is idempotent");
+        Verify(Convert.ToInt32(command.ExecuteScalar()) == 4, "schema migration is idempotent");
     }
 
     var scriptsDirectory = Path.Combine(temporaryRoot, "scripts folder");

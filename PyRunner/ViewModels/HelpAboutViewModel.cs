@@ -109,6 +109,7 @@ public sealed partial class HelpAboutViewModel : ObservableObject, IDisposable
     public string PageTitle => L("Help_Title");
     public string PageSubtitle => L("Help_Subtitle");
     public string ProductDescription => L("Help_ProductDescription");
+    public string AiPrivacySummary => L("Help_AiPrivacySummary");
     private string DisplayedProductVersion => string.IsNullOrWhiteSpace(Metadata.Version)
         ? L("Help_UnknownVersion")
         : Metadata.Version;
@@ -622,7 +623,7 @@ public sealed partial class HelpAboutViewModel : ObservableObject, IDisposable
     {
         foreach (var propertyName in new[]
         {
-            nameof(PageTitle), nameof(PageSubtitle), nameof(ProductDescription), nameof(VersionLine),
+            nameof(PageTitle), nameof(PageSubtitle), nameof(ProductDescription), nameof(AiPrivacySummary), nameof(VersionLine),
             nameof(AuthorTitle), nameof(AuthorIdentity), nameof(AuthorAccount), nameof(AuthorBio),
             nameof(SoftwareTitle), nameof(RuntimeInfo), nameof(PythonInfo), nameof(OsInfo),
             nameof(TerminalInfo), nameof(LicenseInfo), nameof(UpdateChannelInfo), nameof(QuickHelpTitle),

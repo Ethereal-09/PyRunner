@@ -20,6 +20,7 @@ internal static class ConPtyNative
     public const uint JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE = 0x00002000;
 
     public const int JobObjectExtendedLimitInformation = 9;
+    public const int JobObjectBasicAccountingInformation = 1;
 
     /// <summary>PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE = 0x00020016（ProcThreadAttributeValue(22, FALSE, TRUE, FALSE)）。</summary>
     // 注意：此值与 EXTENDED_STARTUPINFO_PRESENT(0x00080000) 同为 bit 位域常量，切勿混淆。
@@ -117,6 +118,19 @@ internal static class ConPtyNative
         public UIntPtr PeakJobMemoryUsed;
     }
 
+    [StructLayout(LayoutKind.Sequential)]
+    public struct JOBOBJECT_BASIC_ACCOUNTING_INFORMATION
+    {
+        public long TotalUserTime;
+        public long TotalKernelTime;
+        public long ThisPeriodTotalUserTime;
+        public long ThisPeriodTotalKernelTime;
+        public uint TotalPageFaultCount;
+        public uint TotalProcesses;
+        public uint ActiveProcesses;
+        public uint TotalTerminatedProcesses;
+    }
+
     // ---- ConPTY ----
 
     /// <summary>创建伪终端。hInput：ConPTY 从此句柄读取输入（我们持有同一管道对的写端）；
@@ -201,4 +215,12 @@ internal static class ConPtyNative
 
     [DllImport("kernel32.dll", SetLastError = true, ExactSpelling = true)]
     public static extern bool AssignProcessToJobObject(IntPtr hJob, IntPtr hProcess);
+
+    [DllImport("kernel32.dll", SetLastError = true, ExactSpelling = true)]
+    public static extern bool QueryInformationJobObject(
+        IntPtr hJob,
+        int jobObjectInformationClass,
+        IntPtr lpJobObjectInformation,
+        int cbJobObjectInformationLength,
+        IntPtr lpReturnLength);
 }

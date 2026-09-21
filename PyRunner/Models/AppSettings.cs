@@ -32,6 +32,9 @@ public sealed class AppSettings
     /// <summary>输出实时刷新（关闭则结束后一次性输出）。</summary>
     public bool LiveFlush { get; set; } = true;
 
+    /// <summary>终端视觉字号，合法范围 10..24。</summary>
+    public int TerminalFontSize { get; set; } = 13;
+
     /// <summary>开机自启动。</summary>
     public bool AutoStart { get; set; }
 
@@ -49,4 +52,11 @@ public sealed class AppSettings
 
     /// <summary>最后一次成功解析的GitHub Release；失败请求不得覆盖。</summary>
     public UpdateCheckCache? LastSuccessfulUpdateCheck { get; set; }
+
+    /// <summary>AI 非敏感配置；API Key 始终存放于 Windows Credential Locker。</summary>
+    public bool AiEnabled { get; set; }
+    public string AiProvider { get; set; } = "OpenAI";
+    public string AiEndpoint { get; set; } = "https://api.openai.com/v1/";
+    public string AiModel { get; set; } = "gpt-5-mini";
+    public int AiTimeoutSeconds { get; set; } = 90;
 }

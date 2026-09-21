@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "source": "https://registry.npmjs.org/",
+  "lockFile": "tools/editor-vendor/package-lock.json",
+  "lockFileSha256": "24A7C6191D2ECE067A646951008E299176991688945DAB4718C23E77733A4005",
+  "bundle": "codemirror.bundle.js",
+  "bundleSha256": "8BC9632BF2F0EBDB5965C6043B0A7BDDA2E3AAA9CDF4B252701B19426AEA0E8A",
+  "packages": [
+    { "name": "codemirror", "version": "6.0.2", "license": "MIT" },
+    { "name": "@codemirror/lang-python", "version": "6.2.1", "license": "MIT" },
+    { "name": "esbuild", "version": "0.28.2", "license": "MIT", "buildOnly": true }
+  ]
+}

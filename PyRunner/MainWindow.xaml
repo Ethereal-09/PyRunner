@@ -41,7 +41,7 @@
                     IsTabStop="False" />
                 <TextBlock
                     x:Name="AppNameText"
-                    Text="{x:Bind AppName, Mode=OneWay}"
+                    Text="{x:Bind AppName}"
                     FontSize="{ThemeResource FontSizeBody}"
                     FontWeight="SemiBold"
                     Foreground="{ThemeResource TextPrimaryBrush}"
@@ -57,7 +57,7 @@
                 <Button
                     x:Name="NavScriptsButton"
                     AutomationProperties.AutomationId="NavScriptsButton"
-                    Content="{x:Bind NavScriptsText, Mode=OneWay}"
+                    Content="{x:Bind NavScriptsText}"
                     MinWidth="56" MinHeight="30"
                     Padding="14,5"
                     FontSize="12"
@@ -73,7 +73,7 @@
                 <Button
                     x:Name="NavRunsButton"
                     AutomationProperties.AutomationId="NavRunsButton"
-                    Content="{x:Bind NavRunsText, Mode=OneWay}"
+                    Content="{x:Bind NavRunsText}"
                     MinWidth="56" MinHeight="30"
                     Padding="14,5"
                     FontSize="12"
@@ -89,7 +89,7 @@
                 <Button
                     x:Name="NavSchedulesButton"
                     AutomationProperties.AutomationId="NavSchedulesButton"
-                    Content="{x:Bind NavSchedulesText, Mode=OneWay}"
+                    Content="{x:Bind NavSchedulesText}"
                     MinWidth="70" MinHeight="30" Padding="14,5" FontSize="12"
                     Template="{StaticResource PyRunnerButtonTemplate}"
                     Background="Transparent" Foreground="{ThemeResource TextSecondaryBrush}" BorderBrush="Transparent"
@@ -99,7 +99,7 @@
                 <Button
                     x:Name="SettingsButton"
                     AutomationProperties.AutomationId="TitleBarSettingsButton"
-                    Content="{x:Bind NavSettingsText, Mode=OneWay}"
+                    Content="{x:Bind NavSettingsText}"
                     MinWidth="56" MinHeight="30"
                     Padding="14,5"
                     FontSize="12"
@@ -115,7 +115,7 @@
                 <Button
                     x:Name="NavHelpButton"
                     AutomationProperties.AutomationId="NavHelpButton"
-                    Content="{x:Bind NavHelpText, Mode=OneWay}"
+                    Content="{x:Bind NavHelpText}"
                     MinWidth="56" MinHeight="30"
                     Padding="14,5"
                     FontSize="12"
@@ -128,6 +128,22 @@
                     PointerReleased="OnNavButtonPointerReleased"
                     PointerExited="OnNavButtonPointerExited"
                     Click="OnNavHelpClick" />
+                <Button
+                    x:Name="NavAiButton"
+                    AutomationProperties.AutomationId="NavAiButton"
+                    Content="{x:Bind NavAiText}"
+                    MinWidth="48" MinHeight="30"
+                    Padding="14,5"
+                    FontSize="12"
+                    Template="{StaticResource PyRunnerButtonTemplate}"
+                    Background="Transparent"
+                    Foreground="{ThemeResource TextSecondaryBrush}"
+                    BorderBrush="Transparent"
+                    PointerEntered="OnNavButtonPointerEntered"
+                    PointerPressed="OnNavButtonPointerPressed"
+                    PointerReleased="OnNavButtonPointerReleased"
+                    PointerExited="OnNavButtonPointerExited"
+                    Click="OnNavAiClick" />
             </StackPanel>
 
             <!-- 只把中间空白区交给系统作为窗口拖动区。导航和主题按钮必须位于
@@ -140,8 +156,8 @@
             <Button
                 x:Name="ThemeButton"
                 AutomationProperties.AutomationId="TitleBarThemeButton"
-                AutomationProperties.Name="{x:Bind ThemeToggleText, Mode=OneWay}"
-                ToolTipService.ToolTip="{x:Bind ThemeToggleText, Mode=OneWay}"
+                AutomationProperties.Name="{x:Bind ThemeToggleText}"
+                ToolTipService.ToolTip="{x:Bind ThemeToggleText}"
                 Grid.Column="3"
                 VerticalAlignment="Center"
                 Margin="6,0,8,0"
@@ -158,7 +174,7 @@
                 <FontIcon
                     FontFamily="Segoe Fluent Icons"
                     FontSize="14"
-                    Glyph="{x:Bind ThemeToggleGlyph, Mode=OneWay}" />
+                    Glyph="{x:Bind ThemeToggleGlyph}" />
             </Button>
         </Grid>
 
@@ -325,16 +341,216 @@
                                 Click="OnEditClick">
                                 <StackPanel Orientation="Horizontal" Spacing="6">
                                     <ContentControl ContentTemplate="{StaticResource Icon_Edit}" Width="15" Height="15" IsTabStop="False" />
-                                    <TextBlock Text="{x:Bind EditText, Mode=OneWay}" VerticalAlignment="Center" />
+                                    <TextBlock Text="{x:Bind EditText}" VerticalAlignment="Center" />
                                 </StackPanel>
                             </Button>
+                            <Button
+                                x:Name="NewFromTemplateButton"
+                                AutomationProperties.AutomationId="NewFromTemplateButton"
+                                Content="{x:Bind NewFromTemplateText, Mode=OneTime}"
+                                MinWidth="96" Height="36" Padding="14,8"
+                                Click="OnNewFromTemplateClick" />
                         </StackPanel>
                     </Grid>
 
                     <!-- 脚本页：独立多标签终端，历史不再常驻挤占空间。 -->
                     <Grid x:Name="ScriptsPage" Grid.Row="1" Background="{ThemeResource TerminalBackgroundBrush}">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+                        <Grid.Resources>
+                            <views:BoolToVisibilityConverter x:Key="DependencyBoolToVisibility" />
+                        </Grid.Resources>
+                        <Expander
+                            x:Name="DependencyExpander"
+                            Grid.Row="0"
+                            AutomationProperties.AutomationId="DependencyExpander"
+                            IsExpanded="{x:Bind DependencyViewModel.IsExpanded, Mode=TwoWay}"
+                            Visibility="{Binding HasContext, Converter={StaticResource DependencyBoolToVisibility}}"
+                            Background="{ThemeResource MainSurfaceBrush}"
+                            HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Stretch">
+                            <Expander.Header>
+                                <Grid MinHeight="42" Padding="4,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <FontIcon Glyph="&#xE896;" FontSize="15" Foreground="{ThemeResource AccentLightBrush}" />
+                                    <StackPanel Grid.Column="1" Margin="10,0,12,0" VerticalAlignment="Center">
+                                        <TextBlock
+                                            Text="{x:Bind DependencyViewModel.SectionTitle, Mode=OneWay}"
+                                            FontWeight="SemiBold"
+                                            Foreground="{ThemeResource TextPrimaryBrush}" />
+                                        <TextBlock
+                                            Text="{x:Bind DependencyViewModel.StatusText, Mode=OneWay}"
+                                            FontSize="11"
+                                            Foreground="{ThemeResource TextMutedBrush}"
+                                            TextTrimming="CharacterEllipsis" />
+                                    </StackPanel>
+                                    <ProgressRing
+                                        Grid.Column="2"
+                                        Width="18" Height="18"
+                                        IsActive="{x:Bind DependencyViewModel.IsBusy, Mode=OneWay}"
+                                        Visibility="{Binding IsBusy, Converter={StaticResource DependencyBoolToVisibility}}" />
+                                </Grid>
+                            </Expander.Header>
+                            <ScrollViewer
+                                MaxHeight="320"
+                                HorizontalScrollMode="Disabled"
+                                HorizontalScrollBarVisibility="Disabled"
+                                VerticalScrollBarVisibility="Auto">
+                                <StackPanel Padding="12,4,12,12" Spacing="10">
+                                    <TextBlock
+                                        Text="{x:Bind DependencyViewModel.NetworkNotice, Mode=OneWay}"
+                                        TextWrapping="Wrap"
+                                        FontSize="11"
+                                        Foreground="{ThemeResource StatusRunningBrush}" />
+
+                                    <Grid ColumnSpacing="8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="{x:Bind DependencyViewModel.RequirementsLabel, Mode=OneWay}" Foreground="{ThemeResource TextMutedBrush}" />
+                                        <TextBlock
+                                            Grid.Column="1"
+                                            Text="{x:Bind DependencyViewModel.RequirementsPath, Mode=OneWay}"
+                                            TextWrapping="Wrap"
+                                            IsTextSelectionEnabled="True"
+                                            Foreground="{ThemeResource TextBodyBrush}" />
+                                        <Button
+                                            Grid.Column="2"
+                                            Content="{x:Bind DependencyViewModel.CopyText, Mode=OneWay}"
+                                            Command="{x:Bind DependencyViewModel.CopyRequirementsPathCommand}"
+                                            MinHeight="28" Padding="10,3" />
+                                    </Grid>
+
+                                    <Grid ColumnSpacing="8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="{x:Bind DependencyViewModel.InterpreterLabel, Mode=OneWay}" Foreground="{ThemeResource TextMutedBrush}" />
+                                        <StackPanel Grid.Column="1">
+                                            <TextBlock Text="{x:Bind DependencyViewModel.InterpreterName, Mode=OneWay}" Foreground="{ThemeResource TextBodyBrush}" />
+                                            <TextBlock
+                                                Text="{x:Bind DependencyViewModel.InterpreterPath, Mode=OneWay}"
+                                                TextWrapping="Wrap"
+                                                IsTextSelectionEnabled="True"
+                                                FontSize="11"
+                                                Foreground="{ThemeResource TextMutedBrush}" />
+                                        </StackPanel>
+                                        <Button
+                                            Grid.Column="2"
+                                            Content="{x:Bind DependencyViewModel.CopyText, Mode=OneWay}"
+                                            Command="{x:Bind DependencyViewModel.CopyInterpreterPathCommand}"
+                                            MinHeight="28" Padding="10,3" />
+                                    </Grid>
+
+                                    <StackPanel
+                                        Visibility="{Binding HasRisks, Converter={StaticResource DependencyBoolToVisibility}}"
+                                        Spacing="4">
+                                        <TextBlock Text="{x:Bind DependencyViewModel.RisksTitle, Mode=OneWay}" FontWeight="SemiBold" Foreground="{ThemeResource StatusErrorBrush}" />
+                                        <ItemsControl ItemsSource="{x:Bind DependencyViewModel.RiskMessages, Mode=OneWay}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding}" TextWrapping="Wrap" IsTextSelectionEnabled="True" FontSize="11" Foreground="{ThemeResource TextBodyBrush}" />
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+
+                                    <ListView
+                                        ItemsSource="{x:Bind DependencyViewModel.Items, Mode=OneWay}"
+                                        MaxHeight="150"
+                                        SelectionMode="None"
+                                        IsItemClickEnabled="False"
+                                        Visibility="{Binding HasItems, Converter={StaticResource DependencyBoolToVisibility}}">
+                                        <ListView.ItemTemplate>
+                                            <DataTemplate>
+                                                <Grid Padding="2,4" ColumnSpacing="12">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="2*" />
+                                                        <ColumnDefinition Width="3*" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <StackPanel>
+                                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                                        <TextBlock Text="{Binding Requested}" FontSize="11" Foreground="{ThemeResource TextMutedBrush}" TextTrimming="CharacterEllipsis" />
+                                                    </StackPanel>
+                                                    <TextBlock Grid.Column="1" VerticalAlignment="Center" TextWrapping="Wrap">
+                                                        <Run Text="{Binding InstalledVersion}" />
+                                                        <Run Text=" → " />
+                                                        <Run Text="{Binding PlannedVersion}" />
+                                                    </TextBlock>
+                                                    <TextBlock Grid.Column="2" Text="{Binding Status}" VerticalAlignment="Center" Foreground="{ThemeResource StatusRunningBrush}" />
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ListView.ItemTemplate>
+                                    </ListView>
+
+                                    <Expander
+                                        Header="{x:Bind DependencyViewModel.DetailsTitle, Mode=OneWay}"
+                                        Visibility="{Binding HasDiagnostic, Converter={StaticResource DependencyBoolToVisibility}}">
+                                        <TextBox
+                                            Text="{x:Bind DependencyViewModel.DiagnosticText, Mode=OneWay}"
+                                            IsReadOnly="True"
+                                            AcceptsReturn="True"
+                                            TextWrapping="Wrap"
+                                            MaxHeight="130" />
+                                    </Expander>
+
+                                    <TextBlock
+                                        Text="{x:Bind DependencyViewModel.CompatibilityText, Mode=OneWay}"
+                                        TextWrapping="Wrap"
+                                        IsTextSelectionEnabled="True"
+                                        Foreground="{ThemeResource StatusRunningBrush}" />
+
+                                    <TextBlock
+                                        Text="{x:Bind DependencyViewModel.CommandPreview, Mode=OneWay}"
+                                        TextWrapping="Wrap"
+                                        IsTextSelectionEnabled="True"
+                                        FontFamily="{ThemeResource TerminalFontFamily}"
+                                        FontSize="11"
+                                        Foreground="{ThemeResource TextMutedBrush}" />
+
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <Button
+                                            AutomationProperties.AutomationId="DependencyCheckButton"
+                                            Content="{x:Bind DependencyViewModel.CheckText, Mode=OneWay}"
+                                            Command="{x:Bind DependencyViewModel.CheckCommand}"
+                                            MinHeight="32" Padding="14,5" />
+                                        <Button
+                                            AutomationProperties.AutomationId="DependencyInstallButton"
+                                            Content="{x:Bind DependencyViewModel.InstallText, Mode=OneWay}"
+                                            Command="{x:Bind DependencyViewModel.InstallCommand}"
+                                            MinHeight="32" Padding="14,5" />
+                                        <Button
+                                            AutomationProperties.AutomationId="DependencyCancelButton"
+                                            Content="{x:Bind DependencyViewModel.CancelText, Mode=OneWay}"
+                                            Command="{x:Bind DependencyViewModel.CancelCommand}"
+                                            MinHeight="32" Padding="14,5" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </ScrollViewer>
+                        </Expander>
+                        <Grid Grid.Row="1" Padding="12,6" Background="{ThemeResource MainSurfaceBrush}">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <ToggleButton x:Name="TerminalModeButton" Content="{x:Bind TerminalModeText, Mode=OneTime}"
+                                              IsChecked="True" Click="OnTerminalModeClick" />
+                                <ToggleButton x:Name="CodeModeButton" Content="{x:Bind CodeModeText, Mode=OneTime}"
+                                              Click="OnCodeModeClick" />
+                            </StackPanel>
+                        </Grid>
                         <TabView
                             x:Name="Tabs"
+                            Grid.Row="2"
                             AutomationProperties.AutomationId="WorkspaceTabs"
                             IsAddTabButtonVisible="False"
                             HorizontalAlignment="Stretch"
@@ -378,10 +594,40 @@
                         </TabView>
                         <views:EmptyStateView
                             x:Name="WorkspaceHint"
+                            Grid.Row="2"
                             IconTemplate="{StaticResource Icon_Terminal}"
                             Description="{x:Bind ViewModel.WorkspaceHintText, Mode=OneWay}"
                             ShowButton="False"
                             IsHitTestVisible="False" />
+                        <Grid x:Name="CodeWorkspace" Grid.Row="2" Visibility="Collapsed"
+                              Background="{ThemeResource MainSurfaceBrush}">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <CommandBar DefaultLabelPosition="Right" IsDynamicOverflowEnabled="True">
+                                <AppBarButton Label="{x:Bind CodeEditorViewModel.SaveText, Mode=OneWay}"
+                                              Command="{x:Bind CodeEditorViewModel.SaveCommand}" />
+                                <AppBarButton Label="{x:Bind CodeEditorViewModel.UndoText, Mode=OneWay}"
+                                              Command="{x:Bind CodeEditorViewModel.UndoCommand}" />
+                                <AppBarButton Label="{x:Bind CodeEditorViewModel.RedoText, Mode=OneWay}"
+                                              Command="{x:Bind CodeEditorViewModel.RedoCommand}" />
+                                <AppBarButton Label="{x:Bind CodeEditorViewModel.ExternalText, Mode=OneWay}"
+                                              Command="{x:Bind CodeEditorViewModel.OpenExternalCommand}" />
+                            </CommandBar>
+                            <WebView2 x:Name="CodeEditorWebView" Grid.Row="1"
+                                      HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
+                            <Grid Grid.Row="2" Padding="12,5" ColumnSpacing="14">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                <TextBlock Text="{x:Bind CodeEditorViewModel.StatusText, Mode=OneWay}" TextTrimming="CharacterEllipsis" />
+                                <TextBlock Grid.Column="1" Text="{x:Bind CodeEditorViewModel.ReadOnlyText, Mode=OneWay}" />
+                                <TextBlock Grid.Column="2" Text="{x:Bind CodeEditorViewModel.EncodingText, Mode=OneWay}" />
+                                <TextBlock Grid.Column="3" Text="{x:Bind CodeEditorViewModel.NewLineText, Mode=OneWay}" />
+                                <TextBlock Grid.Column="4" Text="{x:Bind CodeEditorViewModel.PositionText, Mode=OneWay}" />
+                            </Grid>
+                        </Grid>
                     </Grid>
 
                     <!-- “运行”导航页：当前脚本最近十次记录，点击可查看完整输出。 -->
@@ -400,7 +646,7 @@
                         </Grid.RowDefinitions>
                         <Grid Padding="22,0" BorderBrush="{ThemeResource BorderSubtleBrush}" BorderThickness="0,0,0,1">
                             <TextBlock
-                                Text="{x:Bind RunsTitleText, Mode=OneWay}"
+                                Text="{x:Bind RunsTitleText}"
                                 FontSize="{ThemeResource FontSizeH3}"
                                 FontWeight="SemiBold"
                                 Foreground="{ThemeResource TextTitleBrush}"
@@ -426,12 +672,14 @@
                                                     <ColumnDefinition Width="140" />
                                                     <ColumnDefinition Width="80" />
                                                     <ColumnDefinition Width="90" />
+                                                    <ColumnDefinition Width="180" />
                                                     <ColumnDefinition Width="*" />
                                                 </Grid.ColumnDefinitions>
                                                 <TextBlock Text="{Binding TimeText}" FontFamily="{ThemeResource TerminalFontFamily}" Foreground="{ThemeResource TextSecondaryBrush}" VerticalAlignment="Center" />
                                                 <TextBlock Grid.Column="1" Text="{Binding StatusText}" Foreground="{Binding Status, Converter={StaticResource HistoryStatusToBrush}}" VerticalAlignment="Center" />
                                                 <TextBlock Grid.Column="2" Text="{Binding ExitCodeText}" FontFamily="{ThemeResource TerminalFontFamily}" Foreground="{ThemeResource TextMutedBrush}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-                                                <TextBlock Grid.Column="3" Text="{Binding Summary}" ToolTipService.ToolTip="{Binding Summary}" Foreground="{ThemeResource TextMutedBrush}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" MaxLines="1" VerticalAlignment="Center" />
+                                                <TextBlock Grid.Column="3" Text="{Binding MetricsText}" FontFamily="{ThemeResource TerminalFontFamily}" Foreground="{ThemeResource TextMutedBrush}" VerticalAlignment="Center" />
+                                                <TextBlock Grid.Column="4" Text="{Binding Summary}" ToolTipService.ToolTip="{Binding Summary}" Foreground="{ThemeResource TextMutedBrush}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" MaxLines="1" VerticalAlignment="Center" />
                                             </Grid>
                                         </Border>
                                     </DataTemplate>
@@ -456,6 +704,12 @@
                     Visibility="Collapsed" />
                 <ContentControl
                     x:Name="ScheduledTasksHost"
+                    HorizontalContentAlignment="Stretch"
+                    VerticalContentAlignment="Stretch"
+                    Visibility="Collapsed" />
+                <ContentControl
+                    x:Name="AiAssistantPageHost"
+                    AutomationProperties.AutomationId="AiAssistantPageHost"
                     HorizontalContentAlignment="Stretch"
                     VerticalContentAlignment="Stretch"
                     Visibility="Collapsed" />

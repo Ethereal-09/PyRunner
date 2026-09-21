@@ -27,12 +27,19 @@
     <Compile Include="..\PyRunner\Services\ScriptService.cs" Link="Services\ScriptService.cs" />
     <Compile Include="..\PyRunner\Services\ScheduledTaskService.cs" Link="Services\ScheduledTaskService.cs" />
     <Compile Include="..\PyRunner\Services\ValidationException.cs" Link="Services\ValidationException.cs" />
+    <Compile Include="..\PyRunner\Editor\CodeDocumentModels.cs" Link="Editor\CodeDocumentModels.cs" />
+    <Compile Include="..\PyRunner\Services\ICodeDocumentService.cs" Link="Services\ICodeDocumentService.cs" />
+    <Compile Include="..\PyRunner\Services\CodeDocumentService.cs" Link="Services\CodeDocumentService.cs" />
+    <Compile Include="..\PyRunner\Services\ScriptTemplateService.cs" Link="Services\ScriptTemplateService.cs" />
+    <Compile Include="..\PyRunner\Services\TerminalAppearanceService.cs" Link="Services\TerminalAppearanceService.cs" />
     <Compile Include="..\PyRunner\Terminal\ConPtyNative.cs" Link="Terminal\ConPtyNative.cs" />
     <Compile Include="..\PyRunner\Terminal\PtySession.cs" Link="Terminal\PtySession.cs" />
     <Compile Include="..\PyRunner\DebugLog.cs" Link="DebugLog.cs" />
     <Compile Include="..\PyRunner\Models\HelpSettingsSection.cs" Link="Models\HelpSettingsSection.cs" />
     <Compile Include="..\PyRunner\Models\UpdateCheckModels.cs" Link="Models\UpdateCheckModels.cs" />
     <Compile Include="..\PyRunner\Models\UpdatePackageModels.cs" Link="Models\UpdatePackageModels.cs" />
+    <Compile Include="..\PyRunner\Models\DependencyCheckModels.cs" Link="Models\DependencyCheckModels.cs" />
+    <Compile Include="..\PyRunner\Models\AiAssistantModels.cs" Link="Models\AiAssistantModels.cs" />
     <Compile Include="..\PyRunner\Models\AppSettings.cs" Link="Models\AppSettings.cs" />
     <Compile Include="..\PyRunner\Services\ISettingsService.cs" Link="Services\ISettingsService.cs" />
     <Compile Include="..\PyRunner\Services\JsonSettingsService.cs" Link="Services\JsonSettingsService.cs" />
@@ -49,6 +56,23 @@
     <Compile Include="..\PyRunner\Services\Sha256UpdatePackageVerifier.cs" Link="Services\Sha256UpdatePackageVerifier.cs" />
     <Compile Include="..\PyRunner\Services\UpdateCachePathGuard.cs" Link="Services\UpdateCachePathGuard.cs" />
     <Compile Include="..\PyRunner\Services\VerifiedUpdateInstaller.cs" Link="Services\VerifiedUpdateInstaller.cs" />
+    <Compile Include="..\PyRunner\Services\IDependencyServices.cs" Link="Services\IDependencyServices.cs" />
+    <Compile Include="..\PyRunner\Services\DependencyTextSanitizer.cs" Link="Services\DependencyTextSanitizer.cs" />
+    <Compile Include="..\PyRunner\Services\RequirementsPolicy.cs" Link="Services\RequirementsPolicy.cs" />
+    <Compile Include="..\PyRunner\Services\DependencyInspectionService.cs" Link="Services\DependencyInspectionService.cs" />
+    <Compile Include="..\PyRunner\Services\DependencyInstallService.cs" Link="Services\DependencyInstallService.cs" />
+    <Compile Include="..\PyRunner\Services\AI\IAiServices.cs" Link="Services\AI\IAiServices.cs" />
+    <Compile Include="..\PyRunner\Services\AI\AiEndpointPolicy.cs" Link="Services\AI\AiEndpointPolicy.cs" />
+    <Compile Include="..\PyRunner\Services\AI\SecretScanService.cs" Link="Services\AI\SecretScanService.cs" />
+    <Compile Include="..\PyRunner\Services\AI\AiContextBuilder.cs" Link="Services\AI\AiContextBuilder.cs" />
+    <Compile Include="..\PyRunner\Services\AI\AiChangeReviewService.cs" Link="Services\AI\AiChangeReviewService.cs" />
+    <Compile Include="..\PyRunner\Services\AI\OpenAiResponsesClient.cs" Link="Services\AI\OpenAiResponsesClient.cs" />
+    <Compile Include="..\PyRunner\Services\AI\AiConfigurationService.cs" Link="Services\AI\AiConfigurationService.cs" />
+    <Compile Include="..\PyRunner\Services\AI\AiConversationStore.cs" Link="Services\AI\AiConversationStore.cs" />
+    <Compile Include="..\PyRunner\Services\AI\AiFileContextService.cs" Link="Services\AI\AiFileContextService.cs" />
+    <Compile Include="..\PyRunner\Services\AI\AiPatchApplicationService.cs" Link="Services\AI\AiPatchApplicationService.cs" />
+    <Compile Include="..\PyRunner\ViewModels\AiAssistantViewModel.cs" Link="ViewModels\AiAssistantViewModel.cs" />
+    <Compile Include="..\PyRunner\ViewModels\ScriptDependencyViewModel.cs" Link="ViewModels\ScriptDependencyViewModel.cs" />
     <Compile Include="..\PyRunner\ViewModels\HelpAboutViewModel.cs" Link="ViewModels\HelpAboutViewModel.cs" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.*" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.30" />
@@ -61,5 +85,11 @@
     <EmbeddedResource Include="..\PyRunner\Data\Migrations\002_scheduled_tasks.sql"
                       Link="Data\Migrations\002_scheduled_tasks.sql"
                       LogicalName="PyRunner.Data.Migrations.002_scheduled_tasks.sql" />
+    <EmbeddedResource Include="..\PyRunner\Data\Migrations\003_run_metrics.sql"
+                      Link="Data\Migrations\003_run_metrics.sql"
+                      LogicalName="PyRunner.Data.Migrations.003_run_metrics.sql" />
+    <EmbeddedResource Include="..\PyRunner\Data\Migrations\004_ai_conversations.sql"
+                      Link="Data\Migrations\004_ai_conversations.sql"
+                      LogicalName="PyRunner.Data.Migrations.004_ai_conversations.sql" />
   </ItemGroup>
 </Project>

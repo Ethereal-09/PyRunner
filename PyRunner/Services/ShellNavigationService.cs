@@ -6,6 +6,7 @@ public enum ShellPage
     Runs,
     ScheduledTasks,
     Help,
+    AiAssistant,
 }
 
 public interface IShellNavigationService

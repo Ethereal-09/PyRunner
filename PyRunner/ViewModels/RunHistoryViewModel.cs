@@ -29,6 +29,7 @@ public sealed class RunHistoryItemViewModel
 
     /// <summary>完整输出（点开详情对话框展示）。</summary>
     public string FullOutput { get; init; } = string.Empty;
+    public string MetricsText { get; init; } = string.Empty;
 
     public override string ToString() => $"{TimeText} {StatusText}";
 }
@@ -120,11 +121,23 @@ public sealed partial class RunHistoryViewModel : ObservableObject
             Status = status,
             StatusText = StatusText(status),
             ExitCodeText = record.ExitCode?.ToString(CultureInfo.InvariantCulture) ?? "-",
+            MetricsText = FormatMetrics(record),
             Summary = BuildSummary(output),
             // 终端程序在清屏或刷新输出时常会留下大量前导换行。
             // 详情视图从第一个实际字符开始，不改动后续输出的排版。
             FullOutput = AnsiRegex.Replace(output, string.Empty).TrimStart(),
         };
+    }
+
+    private string FormatMetrics(RunRecord record)
+    {
+        if (!record.DurationMs.HasValue && !record.PeakJobMemoryBytes.HasValue)
+            return _localization["Metrics_Unavailable"];
+        var duration = record.DurationMs.HasValue ? $"{record.DurationMs.Value / 1000d:0.00}s" : "-";
+        var memory = record.PeakJobMemoryBytes.HasValue
+            ? $"{record.PeakJobMemoryBytes.Value / 1024d / 1024d:0.0} MiB"
+            : "-";
+        return string.Format(CultureInfo.CurrentCulture, _localization["Metrics_Summary"], duration, memory);
     }
 
     /// <summary>UTC ISO-8601 → 本地时间展示；解析失败回退原文。</summary>

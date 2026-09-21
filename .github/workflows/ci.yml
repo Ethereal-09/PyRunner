@@ -172,6 +172,20 @@ jobs:
 
           Write-Host "Verified $verified vendored terminal asset hashes."
 
+      - name: Verify offline code editor vendor hashes
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $assetRoot = Join-Path $PWD "PyRunner\Editor\wwwroot"
+          $manifest = Get-Content -LiteralPath (Join-Path $assetRoot "vendor-manifest.json") -Raw | ConvertFrom-Json
+          $bundleHash = (Get-FileHash -LiteralPath (Join-Path $assetRoot $manifest.bundle) -Algorithm SHA256).Hash
+          $lockHash = (Get-FileHash -LiteralPath (Join-Path $PWD $manifest.lockFile) -Algorithm SHA256).Hash
+          if ($bundleHash -cne $manifest.bundleSha256.ToUpperInvariant()) { throw "Code editor bundle SHA-256 mismatch." }
+          if ($lockHash -cne $manifest.lockFileSha256.ToUpperInvariant()) { throw "Code editor lock file SHA-256 mismatch." }
+          $html = Get-Content -LiteralPath (Join-Path $assetRoot "index.html") -Raw
+          if ($html -match '(?i)https?://(?!pyrunner-editor\.local)') { throw "The code editor must not load remote assets." }
+          Write-Host "Verified the offline code editor bundle and lock file."
+
       - name: Confirm tracked files are unchanged
         shell: pwsh
         run: |

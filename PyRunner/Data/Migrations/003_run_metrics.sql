@@ -1,0 +1,3 @@
+ALTER TABLE RunRecord ADD COLUMN DurationMs INTEGER;
+ALTER TABLE RunRecord ADD COLUMN PeakJobMemoryBytes INTEGER;
+ALTER TABLE RunRecord ADD COLUMN MetricsStatus TEXT;

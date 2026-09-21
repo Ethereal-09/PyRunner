@@ -19,7 +19,7 @@
     </ContentDialog.Resources>
 
     <ScrollViewer x:Name="SettingsScroller" VerticalScrollMode="Auto" VerticalScrollBarVisibility="Auto" MaxHeight="560">
-        <StackPanel MinWidth="480" Spacing="12">
+        <StackPanel MinWidth="320" MaxWidth="560" Spacing="12">
 
             <!-- ==== 分组一：脚本路径列表 ==== -->
             <TextBlock
@@ -177,7 +177,58 @@
                     IsChecked="{Binding AutoStart, Mode=TwoWay}" />
             </StackPanel>
 
-            <!-- ==== 分组四：语言（切换即时生效） ==== -->
+            <TextBlock
+                Text="{Binding GroupTerminalAppearance}"
+                FontSize="{ThemeResource FontSizeH3}"
+                FontWeight="SemiBold"
+                Foreground="{ThemeResource TextTitleBrush}"
+                Margin="0,8,0,0" />
+            <Grid ColumnSpacing="10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="92" />
+                </Grid.ColumnDefinitions>
+                <Slider Minimum="10" Maximum="24" StepFrequency="1"
+                        Value="{Binding TerminalFontSizeDraft, Mode=TwoWay}"
+                        AutomationProperties.Name="{Binding TerminalFontSizeText}"
+                        AutomationProperties.AutomationId="TerminalFontSizeSlider" />
+                <NumberBox Grid.Column="1" Minimum="10" Maximum="24" SmallChange="1"
+                           SpinButtonPlacementMode="Compact"
+                           Value="{Binding TerminalFontSizeDraft, Mode=TwoWay}"
+                           AutomationProperties.Name="{Binding TerminalFontSizeText}"
+                           AutomationProperties.AutomationId="TerminalFontSizeNumber" />
+            </Grid>
+            <TextBlock Text="{Binding TerminalPreviewText}" Foreground="{ThemeResource TextMutedBrush}" />
+            <WebView2 x:Name="TerminalPreviewWebView" Height="108"
+                      AutomationProperties.Name="{Binding TerminalPreviewText}"
+                      AutomationProperties.AutomationId="TerminalFontPreview" />
+
+            <!-- AI 配置：Key 仅进入 PasswordVault，不通过绑定回显。 -->
+            <TextBlock Text="{Binding GroupAi}" FontSize="{ThemeResource FontSizeH3}"
+                       FontWeight="SemiBold" Foreground="{ThemeResource TextTitleBrush}" Margin="0,8,0,0" />
+            <TextBlock Text="{Binding AiPrivacyText}" TextWrapping="Wrap"
+                       Foreground="{ThemeResource TextMutedBrush}" />
+            <CheckBox Content="{Binding AiEnabledText}" IsChecked="{Binding AiEnabled, Mode=TwoWay}"
+                      AutomationProperties.AutomationId="AiEnabledCheckBox" />
+            <ComboBox Header="{Binding AiProviderText}" ItemsSource="{Binding AiProviders}"
+                      SelectedItem="{Binding SelectedAiProvider, Mode=TwoWay}"
+                      HorizontalAlignment="Stretch" AutomationProperties.AutomationId="AiProviderCombo" />
+            <TextBox Header="{Binding AiEndpointText}" Text="{Binding AiEndpointDraft, Mode=TwoWay}"
+                     HorizontalAlignment="Stretch" AutomationProperties.AutomationId="AiEndpointTextBox" />
+            <TextBox Header="{Binding AiModelText}" Text="{Binding AiModelDraft, Mode=TwoWay}"
+                     HorizontalAlignment="Stretch" AutomationProperties.AutomationId="AiModelTextBox" />
+            <PasswordBox x:Name="AiKeyBox" Header="{Binding AiKeyText}" PasswordChanged="OnAiKeyPasswordChanged"
+                         AutomationProperties.AutomationId="AiKeyPasswordBox" />
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <Button Content="{Binding AiSaveText}" Click="OnSaveAiClick" />
+                <Button Content="{Binding AiTestText}" Click="OnTestAiClick"
+                        IsEnabled="{Binding IsTestingAi, Converter={StaticResource InvertBool}}" />
+                <Button Content="{Binding AiDeleteKeyText}" Click="OnDeleteAiKeyClick" />
+            </StackPanel>
+            <TextBlock Text="{Binding AiStatusText}" TextWrapping="Wrap"
+                       Foreground="{ThemeResource TextMutedBrush}" />
+
+            <!-- ==== 语言（切换即时生效） ==== -->
             <TextBlock
                 Text="{Binding GroupLanguage}"
                 FontSize="{ThemeResource FontSizeH3}"

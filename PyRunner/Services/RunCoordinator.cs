@@ -32,12 +32,14 @@ public sealed class RunCoordinator
     private readonly IInterpreterService _interpreters;
     private readonly ILocalizationService _localization;
     private readonly ISettingsService _settings;
+    private readonly ITerminalAppearanceService _terminalAppearance;
 
     private sealed class ActiveRun
     {
         public required TerminalSessionViewModel ViewModel { get; init; }
         public required TailOutputBuffer Buffer { get; init; }
         public required int RecordId { get; init; }
+        public required string InterpreterPath { get; init; }
 
         /// <summary>用户已请求停止（或关闭了运行中标签）：退出时状态映射 Killed。</summary>
         public bool StopRequested { get; set; }
@@ -49,6 +51,7 @@ public sealed class RunCoordinator
     /// <summary>运行中会话索引（ScriptId → ActiveRun）；同脚本禁止并发的真相源。</summary>
     private readonly Dictionary<int, ActiveRun> _activeByScriptId = new();
     private bool _updateInstallBlocked;
+    private readonly HashSet<string> _dependencyInstallBlockedInterpreters = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>Restart 编排的一次性终结等待订阅（评审修 4）：Finalize 时完成。</summary>
     private sealed class ExitWaiter
@@ -63,12 +66,14 @@ public sealed class RunCoordinator
         IRunRecordService runRecords,
         IInterpreterService interpreters,
         ILocalizationService localization,
-        ISettingsService settings)
+        ISettingsService settings,
+        ITerminalAppearanceService terminalAppearance)
     {
         _runRecords = runRecords;
         _interpreters = interpreters;
         _localization = localization;
         _settings = settings;
+        _terminalAppearance = terminalAppearance;
     }
 
     /// <summary>脚本运行状态变化（供侧栏徽章状态机消费；UI 线程）。</summary>
@@ -79,6 +84,30 @@ public sealed class RunCoordinator
 
     /// <summary>更新安装前只读检查；不得通过退出应用强制终止正在运行的脚本。</summary>
     public bool HasActiveRuns => _activeByScriptId.Count != 0;
+
+    public bool IsInterpreterRunning(string interpreterPath)
+    {
+        var normalized = Path.GetFullPath(interpreterPath);
+        return _activeByScriptId.Values.Any(run =>
+            string.Equals(run.InterpreterPath, normalized, StringComparison.OrdinalIgnoreCase));
+    }
+
+    public IDisposable? TryAcquireDependencyInstallLease(string interpreterPath)
+    {
+        var normalized = Path.GetFullPath(interpreterPath);
+        if (IsInterpreterRunning(normalized) || !_dependencyInstallBlockedInterpreters.Add(normalized)) return null;
+        return new DependencyInstallLease(this, normalized);
+    }
+
+    private sealed class DependencyInstallLease(RunCoordinator owner, string interpreterPath) : IDisposable
+    {
+        private RunCoordinator? _owner = owner;
+        public void Dispose()
+        {
+            var current = Interlocked.Exchange(ref _owner, null);
+            current?._dependencyInstallBlockedInterpreters.Remove(interpreterPath);
+        }
+    }
 
     public IUpdateInstallLease? TryAcquireUpdateInstallLease()
     {
@@ -131,6 +160,9 @@ public sealed class RunCoordinator
             return new TryStartResult(null, "Run_NoInterpreter");
         if (!File.Exists(interpreter.ExecutablePath))
             return new TryStartResult(null, "Run_InterpreterMissing");
+        var normalizedInterpreterPath = Path.GetFullPath(interpreter.ExecutablePath);
+        if (_dependencyInstallBlockedInterpreters.Contains(normalizedInterpreterPath))
+            return new TryStartResult(null, "Run_DependencyInstallInProgress");
 
         // 4. venv 判定与环境变量（VIRTUAL_ENV/PATH 由本协调器算好，经 extraEnvironment 传入）
         var extraEnvironment = BuildVenvEnvironment(interpreter.ExecutablePath);
@@ -159,7 +191,7 @@ public sealed class RunCoordinator
         try
         {
             var viewModel = new TerminalSessionViewModel(
-                _localization, commandLine, script.Id, script.Name,
+                _localization, _terminalAppearance, commandLine, script.Id, script.Name,
                 workingDirectory, extraEnvironment,
                 liveFlush: _settings.Current.LiveFlush,
                 autoClearOnExit: _settings.Current.TerminalAutoClear,
@@ -170,6 +202,7 @@ public sealed class RunCoordinator
                 ViewModel = viewModel,
                 Buffer = new TailOutputBuffer(),
                 RecordId = recordId,
+                InterpreterPath = normalizedInterpreterPath,
             };
 
             // 输出旁路：base64 → 原始字节 → 200KB 环形缓冲（线程安全，事件已在 UI 线程）
@@ -303,6 +336,7 @@ public sealed class RunCoordinator
         foreach (var run in _activeByScriptId.Values)
         {
             run.StopTimer?.Stop();
+            run.ViewModel.CaptureMetricsForShutdown();
             if (!run.Finalized)
                 Finalize(run, run.ViewModel.ScriptId, exitCode: null, RunStatus.Killed);
             run.ViewModel.Shutdown();
@@ -372,7 +406,9 @@ public sealed class RunCoordinator
 
         try
         {
-            _runRecords.FinishRun(run.RecordId, exitCode, status, run.Buffer.GetText());
+            var metrics = run.ViewModel.Metrics;
+            _runRecords.FinishRun(run.RecordId, exitCode, status, run.Buffer.GetText(),
+                metrics.DurationMs, metrics.PeakJobMemoryBytes, metrics.Status);
         }
         catch (Exception ex)
         {

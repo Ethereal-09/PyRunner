@@ -11,7 +11,8 @@ public interface IRunRecordService
     int StartRun(int scriptId);
 
     /// <summary>结束运行：写入结束时间/退出码/状态/输出（200KB 尾部截断后文本）。</summary>
-    void FinishRun(int recordId, int? exitCode, RunStatus finalStatus, string? output);
+    void FinishRun(int recordId, int? exitCode, RunStatus finalStatus, string? output,
+        long? durationMs = null, ulong? peakJobMemoryBytes = null, string? metricsStatus = null);
 
     /// <summary>某脚本最近 N 条记录（默认 10，按开始时间倒序）。</summary>
     IReadOnlyList<RunRecord> GetRecent(int scriptId, int count = 10);
@@ -51,7 +52,8 @@ public sealed class RunRecordService : IRunRecordService
         return (int)id;
     }
 
-    public void FinishRun(int recordId, int? exitCode, RunStatus finalStatus, string? output)
+    public void FinishRun(int recordId, int? exitCode, RunStatus finalStatus, string? output,
+        long? durationMs = null, ulong? peakJobMemoryBytes = null, string? metricsStatus = null)
     {
         if (finalStatus == RunStatus.NotRun || finalStatus == RunStatus.Running)
             throw new ArgumentException("结束状态必须为 Success/Failed/Killed", nameof(finalStatus));
@@ -63,7 +65,8 @@ public sealed class RunRecordService : IRunRecordService
         var now = TimeFormat.UtcNowIso();
         using var connection = _connectionFactory.CreateOpenConnection();
         var affected = connection.Execute(
-            "UPDATE RunRecord SET FinishedAt=@Now, ExitCode=@ExitCode, Status=@Status, Output=@Output WHERE Id=@Id;",
+            @"UPDATE RunRecord SET FinishedAt=@Now, ExitCode=@ExitCode, Status=@Status, Output=@Output,
+              DurationMs=@DurationMs, PeakJobMemoryBytes=@PeakJobMemoryBytes, MetricsStatus=@MetricsStatus WHERE Id=@Id;",
             new
             {
                 Id = recordId,
@@ -71,6 +74,10 @@ public sealed class RunRecordService : IRunRecordService
                 ExitCode = exitCode,
                 Status = RunStatusMapping.ToDbString(finalStatus),
                 Output = output,
+                DurationMs = durationMs,
+                PeakJobMemoryBytes = peakJobMemoryBytes.HasValue && peakJobMemoryBytes.Value <= long.MaxValue
+                    ? (long?)peakJobMemoryBytes.Value : null,
+                MetricsStatus = metricsStatus,
             });
 
         if (affected == 0)
@@ -85,7 +92,8 @@ public sealed class RunRecordService : IRunRecordService
     {
         using var connection = _connectionFactory.CreateOpenConnection();
         return connection.Query<RunRecord>(
-            @"SELECT Id, ScriptId, StartedAt, FinishedAt, ExitCode, Status, Output FROM RunRecord
+            @"SELECT Id, ScriptId, StartedAt, FinishedAt, ExitCode, Status, Output,
+                     DurationMs, PeakJobMemoryBytes, MetricsStatus FROM RunRecord
               WHERE ScriptId = @ScriptId ORDER BY StartedAt DESC, Id DESC LIMIT @Count;",
             new { ScriptId = scriptId, Count = count })
             .ToList();

@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using PyRunner.Models;
 using PyRunner.Services;
+using PyRunner.Services.AI;
 
 namespace PyRunner.ViewModels;
 
@@ -52,6 +53,9 @@ public sealed partial class SettingsViewModel : ObservableObject
     private readonly IInterpreterService _interpreterService;
     private readonly IStartupService _startupService;
     private readonly ILocalizationService _localization;
+    private readonly ITerminalAppearanceService _terminalAppearance;
+    private readonly IAiCredentialStore _aiCredentials;
+    private readonly IAiProviderClient _aiProviderClient;
 
     public SettingsViewModel(
         ISettingsService settingsService,
@@ -59,7 +63,10 @@ public sealed partial class SettingsViewModel : ObservableObject
         IScriptService scriptService,
         IInterpreterService interpreterService,
         IStartupService startupService,
-        ILocalizationService localization)
+        ILocalizationService localization,
+        ITerminalAppearanceService terminalAppearance,
+        IAiCredentialStore aiCredentials,
+        IAiProviderClient aiProviderClient)
     {
         _settingsService = settingsService;
         _scriptPathService = scriptPathService;
@@ -67,6 +74,16 @@ public sealed partial class SettingsViewModel : ObservableObject
         _interpreterService = interpreterService;
         _startupService = startupService;
         _localization = localization;
+        _terminalAppearance = terminalAppearance;
+        _aiCredentials = aiCredentials;
+        _aiProviderClient = aiProviderClient;
+        _terminalFontSizeDraft = terminalAppearance.FontSize;
+
+        var ai = settingsService.Current;
+        _aiEnabled = ai.AiEnabled;
+        _selectedAiProvider = ai.AiProvider;
+        _aiEndpointDraft = ai.AiEndpoint;
+        _aiModelDraft = ai.AiModel;
 
         _localization.LanguageChanged += OnLanguageChanged;
         RefreshLists();
@@ -112,9 +129,131 @@ public sealed partial class SettingsViewModel : ObservableObject
     public string OptAutoRefreshScriptsText => _localization["Settings_Opt_AutoRefreshScripts"];
     public string OptAutoStartText => _localization["Settings_Opt_AutoStart"];
     public string GroupLanguage => _localization["Settings_Language"];
+    public string GroupTerminalAppearance => _localization["Settings_TerminalAppearance"];
+    public string TerminalFontSizeText => _localization["Settings_TerminalFontSize"];
+    public string TerminalPreviewText => _localization["Settings_TerminalPreview"];
     public string OkText => _localization["Button_OK"];
     public string CancelText => _localization["Button_Cancel"];
     public string ConnectedText => _localization["Settings_Connected"];
+    public string GroupAi => _localization["AI_Settings_Group"];
+    public string AiPrivacyText => _localization["AI_Settings_Privacy"];
+    public string AiEnabledText => _localization["AI_Settings_Enabled"];
+    public string AiProviderText => _localization["AI_Settings_Provider"];
+    public string AiEndpointText => _localization["AI_Settings_Endpoint"];
+    public string AiModelText => _localization["AI_Settings_Model"];
+    public string AiKeyText => _localization["AI_Settings_Key"];
+    public string AiSaveText => _localization["AI_Settings_Save"];
+    public string AiDeleteKeyText => _localization["AI_Settings_DeleteKey"];
+    public string AiTestText => _localization["AI_Settings_Test"];
+
+    public IReadOnlyList<string> AiProviders { get; } = new[] { "OpenAI", "OpenAiCompatible" };
+
+    [ObservableProperty] private bool _aiEnabled;
+    [ObservableProperty] private string _selectedAiProvider = "OpenAI";
+    [ObservableProperty] private string _aiEndpointDraft = "https://api.openai.com/v1/";
+    [ObservableProperty] private string _aiModelDraft = "gpt-5-mini";
+    [ObservableProperty] private string _aiKeyDraft = string.Empty;
+    [ObservableProperty] private string _aiStatusText = string.Empty;
+    [ObservableProperty] private bool _isTestingAi;
+
+    public bool SaveAiConfiguration()
+    {
+        try
+        {
+            var provider = Enum.TryParse<AiProviderKind>(SelectedAiProvider, true, out var parsed)
+                ? parsed : throw new AiProviderException(AiErrorKind.InvalidConfiguration, "AI_Error_InvalidEndpoint");
+            var endpoint = AiEndpointPolicy.Normalize(AiEndpointDraft, provider);
+            if (string.IsNullOrWhiteSpace(AiModelDraft) || AiModelDraft.Trim().Length > 200)
+                throw new AiProviderException(AiErrorKind.InvalidConfiguration, "AI_Error_InvalidModel");
+
+            var previous = _settingsService.Current;
+            var previousProvider = Enum.TryParse<AiProviderKind>(previous.AiProvider, true, out var oldProvider)
+                ? oldProvider : AiProviderKind.OpenAI;
+            Uri? previousEndpoint = null;
+            try { previousEndpoint = AiEndpointPolicy.Normalize(previous.AiEndpoint, previousProvider); } catch { }
+            if (previousEndpoint is not null && (previousProvider != provider ||
+                !previousEndpoint.Authority.Equals(endpoint.Authority, StringComparison.OrdinalIgnoreCase)))
+                _aiCredentials.Delete(new AiCredentialKey(previousProvider, previousEndpoint.Authority));
+
+            if (!string.IsNullOrWhiteSpace(AiKeyDraft))
+                _aiCredentials.Save(new AiCredentialKey(provider, endpoint.Authority), AiKeyDraft);
+            _settingsService.Update(settings =>
+            {
+                settings.AiEnabled = AiEnabled;
+                settings.AiProvider = provider.ToString();
+                settings.AiEndpoint = endpoint.AbsoluteUri;
+                settings.AiModel = AiModelDraft.Trim();
+            });
+            AiEndpointDraft = endpoint.AbsoluteUri;
+            AiKeyDraft = string.Empty;
+            AiStatusText = _localization["AI_Settings_Saved"];
+            return true;
+        }
+        catch (Exception ex) when (ex is AiProviderException or ArgumentException)
+        {
+            AiStatusText = ex is AiProviderException providerException
+                ? _localization[providerException.Message] : _localization["AI_Error_InvalidCredential"];
+            return false;
+        }
+    }
+
+    public void DeleteAiCredential()
+    {
+        try
+        {
+            var provider = Enum.TryParse<AiProviderKind>(SelectedAiProvider, true, out var parsed) ? parsed : AiProviderKind.OpenAI;
+            var endpoint = AiEndpointPolicy.Normalize(AiEndpointDraft, provider);
+            _aiCredentials.Delete(new AiCredentialKey(provider, endpoint.Authority));
+            AiKeyDraft = string.Empty;
+            AiStatusText = _localization["AI_Settings_KeyDeleted"];
+        }
+        catch (AiProviderException ex) { AiStatusText = _localization[ex.Message]; }
+    }
+
+    public async Task TestAiConnectionAsync()
+    {
+        if (IsTestingAi) return;
+        if (!SaveAiConfiguration()) return;
+        try
+        {
+            var settings = _settingsService.Current;
+            var provider = Enum.Parse<AiProviderKind>(settings.AiProvider, true);
+            var configuration = new AiConfiguration(provider,
+                AiEndpointPolicy.Normalize(settings.AiEndpoint, provider), settings.AiModel, 30);
+            var credential = _aiCredentials.Retrieve(new AiCredentialKey(provider, configuration.Endpoint.Authority))
+                ?? throw new AiProviderException(AiErrorKind.MissingCredential, "AI_Error_MissingCredential");
+            IsTestingAi = true;
+            AiStatusText = _localization["AI_Settings_Testing"];
+            var request = new AiProviderRequest(AiOperation.Explain, "Reply with OK.", null, "Unknown", false);
+            await _aiProviderClient.StreamAsync(configuration, credential, request, null, CancellationToken.None);
+            AiStatusText = _localization["AI_Settings_TestSucceeded"];
+        }
+        catch (AiProviderException ex) { AiStatusText = _localization[ex.Message]; }
+        finally { IsTestingAi = false; }
+    }
+
+    public event Action<int>? TerminalFontSizePreviewChanged;
+
+    [ObservableProperty]
+    private double _terminalFontSizeDraft;
+
+    partial void OnTerminalFontSizeDraftChanged(double value)
+    {
+        var clamped = Math.Clamp((int)Math.Round(value),
+            TerminalAppearanceService.MinimumFontSize, TerminalAppearanceService.MaximumFontSize);
+        if (Math.Abs(value - clamped) > 0.001)
+        {
+            TerminalFontSizeDraft = clamped;
+            return;
+        }
+        TerminalFontSizePreviewChanged?.Invoke(clamped);
+    }
+
+    public void CommitTerminalAppearance() =>
+        _terminalAppearance.SetFontSize((int)Math.Round(TerminalFontSizeDraft));
+
+    public void CancelTerminalAppearance() =>
+        TerminalFontSizeDraft = _terminalAppearance.FontSize;
 
     // ---- 运行选项（勾选即持久化） ----
 
@@ -348,9 +487,17 @@ public sealed partial class SettingsViewModel : ObservableObject
         OnPropertyChanged(nameof(OptAutoRefreshScriptsText));
         OnPropertyChanged(nameof(OptAutoStartText));
         OnPropertyChanged(nameof(GroupLanguage));
+        OnPropertyChanged(nameof(GroupTerminalAppearance));
+        OnPropertyChanged(nameof(TerminalFontSizeText));
+        OnPropertyChanged(nameof(TerminalPreviewText));
         OnPropertyChanged(nameof(OkText));
         OnPropertyChanged(nameof(CancelText));
         OnPropertyChanged(nameof(ConnectedText));
+        OnPropertyChanged(nameof(GroupAi)); OnPropertyChanged(nameof(AiPrivacyText));
+        OnPropertyChanged(nameof(AiEnabledText)); OnPropertyChanged(nameof(AiProviderText));
+        OnPropertyChanged(nameof(AiEndpointText)); OnPropertyChanged(nameof(AiModelText));
+        OnPropertyChanged(nameof(AiKeyText)); OnPropertyChanged(nameof(AiSaveText));
+        OnPropertyChanged(nameof(AiDeleteKeyText)); OnPropertyChanged(nameof(AiTestText));
         RefreshLists(); // 行内状态文案（Valid/Invalid）本地化重建
     }
 

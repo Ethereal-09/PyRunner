@@ -6,6 +6,7 @@ using PyRunner.Data;
 using PyRunner.Helpers;
 using PyRunner.Models;
 using PyRunner.Services;
+using PyRunner.Services.AI;
 using PyRunner.ViewModels;
 using PyRunner.Views;
 
@@ -25,6 +26,7 @@ public partial class App : Application
     private const int CurrentOnboardingVersion = 1;
 
     internal XamlRoot? CurrentXamlRoot => _window?.Content?.XamlRoot;
+    internal Window? CurrentWindow => _window;
 
     /// <summary>全局服务容器（OnLaunched 前构造完成）。
     /// 保留具体类型 ServiceProvider：窗口关闭后 Dispose 级联释放 IDisposable 单例。</summary>
@@ -98,6 +100,23 @@ public partial class App : Application
         services.AddSingleton<IRunRecordService, RunRecordService>();
         services.AddSingleton<IScheduledTaskService, ScheduledTaskService>();
         services.AddSingleton<ScheduleCoordinator>();
+        services.AddSingleton<ITerminalAppearanceService, TerminalAppearanceService>();
+        services.AddSingleton<ICodeDocumentService, CodeDocumentService>();
+        services.AddSingleton<IRecoveryDraftService, RecoveryDraftService>();
+        services.AddSingleton<IScriptTemplateService, ScriptTemplateService>();
+        services.AddSingleton<IExternalEditorLauncher, ExternalEditorLauncher>();
+        services.AddSingleton<ICodeEditorInteraction, CodeEditorInteraction>();
+        services.AddSingleton<IAiCredentialStore, AiCredentialStore>();
+        services.AddSingleton<ISecretScanService, SecretScanService>();
+        services.AddSingleton<IAiContextBuilder, AiContextBuilder>();
+        services.AddSingleton<IAiChangeReviewService, AiChangeReviewService>();
+        services.AddSingleton<IAiInteractionService, AiInteractionService>();
+        services.AddSingleton<IAiConversationStore, AiConversationStore>();
+        services.AddSingleton<IAiFileContextService, AiFileContextService>();
+        services.AddSingleton<IAiPatchApplicationService, AiPatchApplicationService>();
+        services.AddSingleton<AiConfigurationService>();
+        services.AddSingleton<IAiProviderClient>(_ => new OpenAiResponsesClient(
+            new HttpClient(new HttpClientHandler { AllowAutoRedirect = false }) { Timeout = Timeout.InfiniteTimeSpan }));
 
         // Phase E：目录监听（单例，窗口关闭后随容器 Dispose 回收 watcher）与友好通知
         services.AddSingleton<IScriptDirectoryWatcher, ScriptDirectoryWatcher>();
@@ -106,9 +125,20 @@ public partial class App : Application
         // 运行编排（Phase D）：窗口生命周期内单实例，协调全部运行中标签
         services.AddSingleton<RunCoordinator>();
         services.AddSingleton<IUpdateInstallGuard, UpdateInstallGuard>();
+        services.AddSingleton<IRequirementsPolicy, RequirementsPolicy>();
+        services.AddSingleton<IPythonProcessRunner, PythonProcessRunner>();
+        services.AddSingleton<IDependencyInspectionService, DependencyInspectionService>();
+        services.AddSingleton<IDependencyInstallGuard, DependencyInstallGuard>();
+        services.AddSingleton<IDependencyInstallService, DependencyInstallService>();
+        services.AddSingleton<IDependencyInteractionService, DependencyInteractionService>();
 
         // ViewModel / 对话框（按次创建，避免状态串用）
         services.AddTransient<MainViewModel>();
+        services.AddTransient<ScriptDependencyViewModel>();
+        services.AddTransient<CodeEditorViewModel>();
+        services.AddTransient<AiAssistantViewModel>();
+        services.AddTransient<ScriptTemplateViewModel>();
+        services.AddTransient<ScriptTemplateDialog>();
         services.AddTransient<ScriptListViewModel>();
         services.AddTransient<ScriptEditViewModel>();
         services.AddTransient<ScriptEditDialog>();
@@ -130,6 +160,7 @@ public partial class App : Application
         services.AddTransient<Func<HelpAboutPage>>(sp => () => sp.GetRequiredService<HelpAboutPage>());
         services.AddTransient<Func<ScheduledTasksPage>>(sp => () => sp.GetRequiredService<ScheduledTasksPage>());
         services.AddTransient<Func<ScheduledTaskEditDialog>>(sp => () => sp.GetRequiredService<ScheduledTaskEditDialog>());
+        services.AddTransient<Func<ScriptTemplateDialog>>(sp => () => sp.GetRequiredService<ScriptTemplateDialog>());
 
         return services.BuildServiceProvider();
     }
@@ -190,6 +221,9 @@ public partial class App : Application
                 Services.GetRequiredService<ISettingsService>(),
                 Services.GetRequiredService<ILocalizationService>(),
                 Services.GetRequiredService<MainViewModel>(),
+                Services.GetRequiredService<ScriptDependencyViewModel>(),
+                Services.GetRequiredService<CodeEditorViewModel>(),
+                Services.GetRequiredService<AiAssistantViewModel>(),
                 Services.GetRequiredService<ScriptListViewModel>(),
                 Services.GetRequiredService<FileTreeViewModel>(),
                 Services.GetRequiredService<RunCoordinator>(),
@@ -204,7 +238,8 @@ public partial class App : Application
                 Services.GetRequiredService<IScheduledTaskService>(),
                 Services.GetRequiredService<ScheduleCoordinator>(),
                 Services.GetRequiredService<Func<ScheduledTasksPage>>(),
-                Services.GetRequiredService<Func<ScheduledTaskEditDialog>>());
+                Services.GetRequiredService<Func<ScheduledTaskEditDialog>>(),
+                Services.GetRequiredService<Func<ScriptTemplateDialog>>());
         }
         catch (Exception ex)
         {

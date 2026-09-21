@@ -1,0 +1,64 @@
+:root { --surface: #25282c; color-scheme: dark; font-family: "Segoe UI", "Microsoft YaHei UI", system-ui, sans-serif; background: var(--surface); }
+* { box-sizing: border-box; }
+html, body { margin: 0; min-height: 100%; background: var(--surface); color: #d9dee5; }
+body.light { color-scheme: light; color: #20252b; }
+#messages { width: min(calc(100% - 32px), 1040px); min-height: 100%; margin: 0 auto; padding: 10px 0 30px; }
+.message { position: relative; margin: 12px 0 16px; line-height: 1.56; font-size: 13.5px; overflow-wrap: anywhere; }
+.message.user { display: flex; flex-direction: column; align-items: flex-end; }
+.user .body { max-width: min(76%, 600px); padding: 10px 14px; border: 1px solid rgba(49,196,126,.24); border-radius: 10px; background: rgba(24,128,87,.24); }
+.assistant .body { width: 100%; padding: 0 2px; }
+.meta { margin-top: 5px; color: #86919d; font-size: 11px; }
+.assistant > .meta { margin-bottom: 6px; }
+.copy-message { position: absolute; right: 2px; top: -7px; opacity: 0; }
+.assistant:hover .copy-message, .copy-message:focus-visible { opacity: 1; }
+button { border: 1px solid rgba(135,147,160,.35); border-radius: 5px; padding: 4px 8px; background: #252b31; color: inherit; cursor: pointer; }
+body.light button { background: #f2f5f6; }
+button:hover { border-color: #31c47e; }
+h1,h2,h3 { margin: 8px 0 5px; line-height: 1.3; color: #f2f5f7; }
+body.light h1, body.light h2, body.light h3 { color: #17212a; }
+h1 { font-size: 21px; } h2 { font-size: 18px; } h3 { font-size: 16px; }
+p { margin: 4px 0; white-space: pre-wrap; }
+ul { margin: 4px 0; padding-left: 24px; }
+.status, .cancelled, .error { width: fit-content; max-width: 760px; margin: 10px 0 14px; padding: 6px 10px; border-radius: 6px; border: 1px solid rgba(135,147,160,.28); color: #aab4bf; background: rgba(99,112,125,.08); }
+.status { display: inline-flex; align-items: center; gap: 7px; }
+.status-icon { display: inline-grid; place-items: center; width: 16px; height: 16px; border-radius: 50%; background: #259d66; color: white; font-size: 10px; font-weight: 700; }
+.error { border-color: rgba(239,107,107,.42); color: #ff9b9b; }
+.cancelled { border-style: dashed; }
+.retry { margin-left: 10px; }
+.code-block { margin: 12px 0; border: 1px solid rgba(135,147,160,.28); border-radius: 8px; overflow: hidden; background: rgba(15,20,25,.72); }
+body.light .code-block { background: #f5f7f8; }
+.code-header { display: flex; align-items: center; gap: 8px; padding: 7px 10px; background: #252c33; color: #c5ccd3; font-size: 11px; }
+body.light .code-header { background: #e8edef; color: #46515b; }
+.code-header .filename { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.code-header .language { color: #8e99a5; }
+.code-header button { margin-left: auto; border: 0; background: transparent; }
+.code-scroll { overflow-x: auto; }
+pre { margin: 0; padding: 8px 0; font: 12px/1.45 Consolas, "Cascadia Mono", monospace; tab-size: 4; }
+.code-line { display: grid; grid-template-columns: 48px minmax(max-content, 1fr); min-height: 19px; }
+.line-no { padding-right: 12px; text-align: right; color: #68737e; border-right: 1px solid rgba(135,147,160,.16); user-select: none; }
+.line-code { padding: 0 12px; white-space: pre; }
+.tok-keyword { color: #d887ff; } .tok-string { color: #9bd67d; } .tok-number { color: #e4b469; }
+.tok-comment { color: #6d9b65; } .tok-call { color: #65b9f4; }
+body.light .tok-keyword { color: #8b2bbd; } body.light .tok-string { color: #397b28; }
+body.light .tok-number { color: #986719; } body.light .tok-comment { color: #4f7d48; } body.light .tok-call { color: #156fa7; }
+.proposal { display: flex; align-items: center; justify-content: space-between; gap: 18px; width: 100%; margin: 10px 0 18px; padding: 12px 14px; border: 1px solid rgba(135,147,160,.28); border-radius: 8px; background: rgba(49,57,64,.55); }
+.proposal-summary { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.proposal-icon { position: relative; width: 15px; height: 18px; border: 1.5px solid #31c47e; border-radius: 2px; }
+.proposal-icon::after { content: ''; position: absolute; right: -1.5px; top: -1.5px; width: 5px; height: 5px; border-left: 1.5px solid #31c47e; border-bottom: 1.5px solid #31c47e; background: rgba(49,57,64,.95); }
+.proposal-copy { display: flex; flex-direction: column; min-width: 0; gap: 2px; }
+.proposal-copy strong { font-size: 13px; font-weight: 600; }
+.proposal-copy span { overflow: hidden; color: #929da8; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.proposal-actions { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+.proposal-actions .added { color: #42ce88; font-size: 12px; }
+.proposal-actions .deleted { color: #ff7383; font-size: 12px; }
+.proposal-actions .proposal-discard { border-color: transparent; background: transparent; color: #929da8; }
+.proposal-actions .proposal-apply { border-color: #35a875; background: #35a875; color: white; }
+body.light .proposal { background: rgba(238,242,244,.88); }
+@media (max-width: 720px) {
+  #messages { width: calc(100% - 12px); padding-inline: 2px; }
+  .user .body { max-width: 92%; }
+  .message { font-size: 13px; }
+  .code-line { grid-template-columns: 40px minmax(max-content, 1fr); }
+  .proposal { align-items: flex-start; flex-direction: column; }
+  .proposal-actions { width: 100%; flex-wrap: wrap; }
+}

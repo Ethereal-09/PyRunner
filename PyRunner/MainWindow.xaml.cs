@@ -72,6 +72,11 @@ public sealed partial class MainWindow : Window
     /// Show*DialogAsync 内部不再自行置位/复位，标志生命周期归入口所有。</summary>
     private bool _dialogInFlight;
     private bool _isClosing;
+    private bool _codeEditorInitialized;
+    private bool _selectionTransition;
+    private bool _allowClose;
+    private bool _closePromptOpen;
+    private int? _editorScriptId;
 
     // ---- 侧栏拖拽调宽状态（仅 UI 线程） ----
     private bool _thumbDragging;
@@ -101,13 +106,18 @@ public sealed partial class MainWindow : Window
     private readonly CancellationTokenSource _startupUpdateCancellation = new();
     private Task _startupUpdateTask = Task.CompletedTask;
     private readonly HelpAboutPage _helpPage;
+    private readonly AiAssistantPage _aiPage;
     private readonly ScheduledTasksPage _scheduledTasksPage;
     private readonly IScheduledTaskService _scheduledTaskService;
     private readonly ScheduleCoordinator _scheduleCoordinator;
     private readonly Func<ScheduledTaskEditDialog> _scheduledTaskDialogFactory;
+    private readonly Func<ScriptTemplateDialog> _scriptTemplateDialogFactory;
     private readonly Dictionary<int, int> _scheduledRunByScriptId = new();
 
     public MainViewModel ViewModel { get; }
+    public ScriptDependencyViewModel DependencyViewModel { get; }
+    public CodeEditorViewModel CodeEditorViewModel { get; }
+    public AiAssistantViewModel AiAssistantViewModel { get; }
 
     /// <summary>标题栏应用名（x:Bind；语言切换经 Bindings.Update 刷新）。</summary>
     public string AppName => _localization["App_Name"];
@@ -121,6 +131,7 @@ public sealed partial class MainWindow : Window
     public string NavSchedulesText => _localization["Nav_Schedules"];
     public string NavSettingsText => _localization["Nav_Settings"];
     public string NavHelpText => _localization["Nav_Help"];
+    public string NavAiText => _localization["Nav_AI"];
     public string EditText => _localization["Button_Edit"];
     public string NoScriptSelectedText => _localization["Script_NoneSelected"];
     public string SelectScriptHintText => _localization["Script_SelectHint"];
@@ -129,6 +140,9 @@ public sealed partial class MainWindow : Window
     public string TerminalCommandPlaceholderText => _localization["Terminal_CommandPlaceholder"];
     public string StatusNoRunText => _localization["Status_NoRun"];
     public string StatusNoDirectoryText => _localization["Status_NoDirectory"];
+    public string TerminalModeText => _localization["Workspace_Terminal"];
+    public string CodeModeText => _localization["Workspace_Code"];
+    public string NewFromTemplateText => _localization["Template_New"];
 
     /// <summary>当前选中的脚本（壳级占位；数据源为侧栏 VM，运行协调入口消费）。</summary>
     public Script? SelectedScript => _scriptListViewModel.SelectedScript;
@@ -139,6 +153,9 @@ public sealed partial class MainWindow : Window
         ISettingsService settingsService,
         ILocalizationService localization,
         MainViewModel viewModel,
+        ScriptDependencyViewModel dependencyViewModel,
+        CodeEditorViewModel codeEditorViewModel,
+        AiAssistantViewModel aiAssistantViewModel,
         ScriptListViewModel scriptListViewModel,
         FileTreeViewModel fileTreeViewModel,
         RunCoordinator coordinator,
@@ -153,7 +170,8 @@ public sealed partial class MainWindow : Window
         IScheduledTaskService scheduledTaskService,
         ScheduleCoordinator scheduleCoordinator,
         Func<ScheduledTasksPage> scheduledTasksPageFactory,
-        Func<ScheduledTaskEditDialog> scheduledTaskDialogFactory)
+        Func<ScheduledTaskEditDialog> scheduledTaskDialogFactory,
+        Func<ScriptTemplateDialog> scriptTemplateDialogFactory)
     {
         _scriptService = scriptService;
         _scriptPathService = scriptPathService;
@@ -172,12 +190,21 @@ public sealed partial class MainWindow : Window
         _scheduledTaskService = scheduledTaskService;
         _scheduleCoordinator = scheduleCoordinator;
         _scheduledTaskDialogFactory = scheduledTaskDialogFactory;
+        _scriptTemplateDialogFactory = scriptTemplateDialogFactory;
         ViewModel = viewModel;
+        DependencyViewModel = dependencyViewModel;
+        CodeEditorViewModel = codeEditorViewModel;
+        AiAssistantViewModel = aiAssistantViewModel;
+        AiAssistantViewModel.AttachEditor(CodeEditorViewModel);
 
         // Mica 系统背景（Phase C 交付 7）：Win11 呈现云母材质，Win10 自动回退纯色
         SystemBackdrop = new MicaBackdrop();
 
         InitializeComponent();
+        DependencyExpander.DataContext = DependencyViewModel;
+
+        _aiPage = new AiAssistantPage(AiAssistantViewModel, CodeEditorViewModel);
+        AiAssistantPageHost.Content = _aiPage;
 
         _helpPage = helpAboutPageFactory();
         _helpPage.SettingsRequested += OnHelpSettingsRequested;
@@ -237,6 +264,7 @@ public sealed partial class MainWindow : Window
 
         Closed += OnClosed;
         Activated += OnActivated;
+        AppWindow.Closing += OnAppWindowClosing;
 
         // 侧栏：脚本列表 + 文件树双 VM 注入；脚本由配置目录自动导入，保留编辑/删除/运行入口
         Sidebar.Initialize(_scriptListViewModel, _fileTreeViewModel);
@@ -341,6 +369,8 @@ public sealed partial class MainWindow : Window
 
     private void OnActivated(object sender, WindowActivatedEventArgs args)
     {
+        if (_codeEditorInitialized)
+            _ = CodeEditorViewModel.CheckExternalChangeAsync();
         if (_sizeApplied) return;
         _sizeApplied = true;
         // 设计图是 2560x1440 桌面上的最大化窗口；用系统 presenter 适配任意工作区，
@@ -418,6 +448,7 @@ public sealed partial class MainWindow : Window
 
         foreach (var session in _tabSessions.Values)
             session.ApplyTheme(isLight);
+        CodeEditorViewModel.ApplyTheme(isLight);
 
         if (persist)
         {
@@ -428,7 +459,9 @@ public sealed partial class MainWindow : Window
             _scriptListViewModel.Load(selectedPath);
             _fileTreeViewModel.Load();
             RefreshSelectedScriptPresentation();
-            if (HelpPageHost.Visibility == Visibility.Visible)
+            if (AiAssistantPageHost.Visibility == Visibility.Visible)
+                ShowAiPage();
+            else if (HelpPageHost.Visibility == Visibility.Visible)
                 ShowHelpPage();
             else if (ScheduledTasksHost.Visibility == Visibility.Visible)
                 ShowScheduledTasksPage();
@@ -459,6 +492,8 @@ public sealed partial class MainWindow : Window
 
     private void OnNavHelpClick(object sender, RoutedEventArgs e) => _navigation.Navigate(ShellPage.Help);
 
+    private void OnNavAiClick(object sender, RoutedEventArgs e) => _navigation.Navigate(ShellPage.AiAssistant);
+
     private void OnShellNavigated(object? sender, ShellPage page)
     {
         switch (page)
@@ -471,6 +506,9 @@ public sealed partial class MainWindow : Window
                 break;
             case ShellPage.Help:
                 ShowHelpPage();
+                break;
+            case ShellPage.AiAssistant:
+                ShowAiPage();
                 break;
             default:
                 ShowScriptsPage();
@@ -511,7 +549,8 @@ public sealed partial class MainWindow : Window
         (button == NavScriptsButton && WorkArea.Visibility == Visibility.Visible && ScriptsPage.Visibility == Visibility.Visible) ||
         (button == NavRunsButton && WorkArea.Visibility == Visibility.Visible && RunsPage.Visibility == Visibility.Visible) ||
         (button == NavSchedulesButton && ScheduledTasksHost.Visibility == Visibility.Visible) ||
-        (button == NavHelpButton && HelpPageHost.Visibility == Visibility.Visible);
+        (button == NavHelpButton && HelpPageHost.Visibility == Visibility.Visible) ||
+        (button == NavAiButton && AiAssistantPageHost.Visibility == Visibility.Visible);
 
     private void RefreshButtonRestingVisuals()
     {
@@ -547,6 +586,14 @@ public sealed partial class MainWindow : Window
                 ? Views.ThemeBrushes.Get("NavigationSelectedBrush", 0xFF30363A)
                 : transparent,
             HelpPageHost.Visibility == Visibility.Visible
+                ? Views.ThemeBrushes.Get("TextPrimaryBrush", 0xFFF0F2F4)
+                : Views.ThemeBrushes.Get("TextSecondaryBrush", 0xFFAAB2BC));
+        ApplyButtonVisual(
+            NavAiButton,
+            AiAssistantPageHost.Visibility == Visibility.Visible
+                ? Views.ThemeBrushes.Get("NavigationSelectedBrush", 0xFF30363A)
+                : transparent,
+            AiAssistantPageHost.Visibility == Visibility.Visible
                 ? Views.ThemeBrushes.Get("TextPrimaryBrush", 0xFFF0F2F4)
                 : Views.ThemeBrushes.Get("TextSecondaryBrush", 0xFFAAB2BC));
         ApplyButtonVisual(ThemeButton, transparent, Views.ThemeBrushes.Get("TextPrimaryBrush", 0xFFF0F2F4));
@@ -688,6 +735,7 @@ public sealed partial class MainWindow : Window
         WorkArea.Visibility = Visibility.Visible;
         HelpPageHost.Visibility = Visibility.Collapsed;
         ScheduledTasksHost.Visibility = Visibility.Collapsed;
+        AiAssistantPageHost.Visibility = Visibility.Collapsed;
         ScriptsPage.Visibility = Visibility.Visible;
         RunsPage.Visibility = Visibility.Collapsed;
         RefreshButtonRestingVisuals();
@@ -699,6 +747,7 @@ public sealed partial class MainWindow : Window
         WorkArea.Visibility = Visibility.Visible;
         HelpPageHost.Visibility = Visibility.Collapsed;
         ScheduledTasksHost.Visibility = Visibility.Collapsed;
+        AiAssistantPageHost.Visibility = Visibility.Collapsed;
         ScriptsPage.Visibility = Visibility.Collapsed;
         RunsPage.Visibility = Visibility.Visible;
         RefreshButtonRestingVisuals();
@@ -709,6 +758,7 @@ public sealed partial class MainWindow : Window
     {
         WorkArea.Visibility = Visibility.Collapsed;
         ScheduledTasksHost.Visibility = Visibility.Collapsed;
+        AiAssistantPageHost.Visibility = Visibility.Collapsed;
         HelpPageHost.Visibility = Visibility.Visible;
         _helpPage.Refresh();
         RefreshButtonRestingVisuals();
@@ -718,9 +768,21 @@ public sealed partial class MainWindow : Window
     {
         WorkArea.Visibility = Visibility.Collapsed;
         HelpPageHost.Visibility = Visibility.Collapsed;
+        AiAssistantPageHost.Visibility = Visibility.Collapsed;
         ScheduledTasksHost.Visibility = Visibility.Visible;
         _scheduledTasksPage.Refresh();
         RefreshButtonRestingVisuals();
+    }
+
+    private void ShowAiPage()
+    {
+        WorkArea.Visibility = Visibility.Collapsed;
+        HelpPageHost.Visibility = Visibility.Collapsed;
+        ScheduledTasksHost.Visibility = Visibility.Collapsed;
+        AiAssistantPageHost.Visibility = Visibility.Visible;
+        AiAssistantViewModel.IsOpen = true;
+        RefreshButtonRestingVisuals();
+        _ = EnsureCodeEditorContextAsync();
     }
 
     /// <summary>把侧栏选择投影到设计稿脚本信息栏、终端命令预览和状态栏。</summary>
@@ -736,6 +798,7 @@ public sealed partial class MainWindow : Window
 
         if (script == null)
         {
+            DependencyViewModel.SetContext(null, null);
             SelectedScriptNameText.Text = NoScriptSelectedText;
             SelectedScriptMetadataText.Text = SelectScriptHintText;
             ToolTipService.SetToolTip(SelectedScriptMetadataText, null);
@@ -752,6 +815,7 @@ public sealed partial class MainWindow : Window
         }
 
         var interpreter = ResolveInterpreter(script);
+        DependencyViewModel.SetContext(script, interpreter);
         var interpreterText = InterpreterDisplayName(interpreter);
         var category = string.IsNullOrWhiteSpace(script.Category)
             ? _localization["Category_Uncategorized"]
@@ -920,6 +984,7 @@ public sealed partial class MainWindow : Window
             _kbHookDelegate = null;
         }
         _localization.LanguageChanged -= OnLanguageChanged;
+        AppWindow.Closing -= OnAppWindowClosing;
         _scriptListViewModel.DetachLocalization();
         _fileTreeViewModel.DetachLocalization();
         _historyViewModel.DetachLocalization();
@@ -937,6 +1002,10 @@ public sealed partial class MainWindow : Window
         _watcher.Changed -= OnWatcherChanged;
         _scriptListViewModel.PropertyChanged -= OnListSelectionChanged;
         _coordinator.StatusChanged -= OnRunStatusChanged;
+        DependencyViewModel.Dispose();
+        _aiPage.Dispose();
+        CodeEditorViewModel.Dispose();
+        AiAssistantViewModel.Dispose();
 
         // 先释放全部终端会话（Dispose 触发 Job Object 孤儿防护），再退订壳 VM；
         // 顺序约束：ShutdownAll 内 FinishRun 依赖尚未 Dispose 的单例服务（App 的
@@ -1128,7 +1197,13 @@ public sealed partial class MainWindow : Window
         IdleTerminalTab.Visibility = Visibility.Collapsed;
         WorkspaceHint.Visibility = Visibility.Collapsed;
         if (activate)
+        {
+            TerminalModeButton.IsChecked = true;
+            CodeModeButton.IsChecked = false;
+            Tabs.Visibility = Visibility.Visible;
+            CodeWorkspace.Visibility = Visibility.Collapsed;
             _navigation.Navigate(ShellPage.Scripts);
+        }
         if (_scriptService.GetById(viewModel.ScriptId) is { } script)
             TerminalCommandText.Text = BuildCommandPreview(script);
 
@@ -1202,7 +1277,7 @@ public sealed partial class MainWindow : Window
         if (Tabs.TabItems.Count == 0)
         {
             IdleTerminalTab.Visibility = Visibility.Visible;
-            WorkspaceHint.Visibility = Visibility.Visible;
+            WorkspaceHint.Visibility = CodeModeButton.IsChecked == true ? Visibility.Collapsed : Visibility.Visible;
             ViewModel.SetLocalizedStatus("Status_Exited");
             TerminalCommandText.Text = _scriptListViewModel.SelectedScript is { } selected
                 ? BuildCommandPreview(selected)
@@ -1277,6 +1352,7 @@ public sealed partial class MainWindow : Window
     private void OnRunStatusChanged(int scriptId, RunStatus status)
     {
         _scriptListViewModel.SetRunStatus(scriptId, status);
+        DependencyViewModel.RefreshRunState();
 
         if (status is RunStatus.Success or RunStatus.Failed or RunStatus.Killed &&
             _scheduledRunByScriptId.Remove(scriptId, out var scheduledTaskId))
@@ -1332,6 +1408,24 @@ public sealed partial class MainWindow : Window
                 RunStatus.Killed => "Status_RunKilled",
                 _ => "Status_Initializing",
             });
+    }
+
+    private async void OnAppWindowClosing(Microsoft.UI.Windowing.AppWindow sender,
+        Microsoft.UI.Windowing.AppWindowClosingEventArgs args)
+    {
+        if (_allowClose || !CodeEditorViewModel.IsDirty) return;
+        args.Cancel = true;
+        if (_closePromptOpen) return;
+        _closePromptOpen = true;
+        try
+        {
+            if (await CodeEditorViewModel.PrepareToSwitchAsync())
+            {
+                _allowClose = true;
+                Close();
+            }
+        }
+        finally { _closePromptOpen = false; }
     }
 
     private async void OnSidebarSchedule(object? sender, ScriptListItemViewModel item)
@@ -1472,9 +1566,22 @@ public sealed partial class MainWindow : Window
     }
 
     /// <summary>列表选中变化 → 壳 VM 运行状态机（选中脚本 + 是否运行中）+ 历史面板刷新（Phase E）。</summary>
-    private void OnListSelectionChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    private async void OnListSelectionChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
-        if (e.PropertyName != nameof(ScriptListViewModel.SelectedItem)) return;
+        if (e.PropertyName != nameof(ScriptListViewModel.SelectedItem) || _selectionTransition) return;
+        _selectionTransition = true;
+        try
+        {
+            var candidate = _scriptListViewModel.SelectedScript;
+            if (_editorScriptId.HasValue && candidate?.Id != _editorScriptId &&
+                !await CodeEditorViewModel.PrepareToSwitchAsync())
+            {
+                _scriptListViewModel.SelectByScriptId(_editorScriptId.Value);
+                return;
+            }
+            _editorScriptId = candidate?.Id;
+            if (_codeEditorInitialized)
+                await CodeEditorViewModel.LoadAsync(candidate?.FilePath);
         ViewModel.SelectedScript = _scriptListViewModel.SelectedScript;
         ViewModel.SelectedScriptRunning = _scriptListViewModel.SelectedScript is { } s && _coordinator.IsRunning(s.Id);
         _historyViewModel.Load(ViewModel.SelectedScript?.Id);
@@ -1483,6 +1590,67 @@ public sealed partial class MainWindow : Window
             ? Views.ThemeBrushes.Get("DangerSurfaceBrush", 0x2EFF8F8F)
             : Views.ThemeBrushes.Get("GhostButtonBrush", 0x12FFFFFF);
         RefreshSelectedScriptPresentation();
+        }
+        finally { _selectionTransition = false; }
+    }
+
+    private void OnTerminalModeClick(object sender, RoutedEventArgs e)
+    {
+        TerminalModeButton.IsChecked = true;
+        CodeModeButton.IsChecked = false;
+        Tabs.Visibility = Visibility.Visible;
+        WorkspaceHint.Visibility = _tabSessions.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+        CodeWorkspace.Visibility = Visibility.Collapsed;
+    }
+
+    private async void OnCodeModeClick(object sender, RoutedEventArgs e)
+    {
+        CodeModeButton.IsChecked = true;
+        TerminalModeButton.IsChecked = false;
+        Tabs.Visibility = Visibility.Collapsed;
+        WorkspaceHint.Visibility = Visibility.Collapsed;
+        CodeWorkspace.Visibility = Visibility.Visible;
+        await EnsureCodeEditorContextAsync();
+    }
+
+    /// <summary>AI 页面和代码模式共用同一编辑缓冲区。进入任一入口时懒加载 WebView2，
+    /// 并把左侧文件树当前选中的脚本载入，确保 AI 上下文与可审查应用目标一致。</summary>
+    private async Task EnsureCodeEditorContextAsync()
+    {
+        if (_isClosing) return;
+        if (!_codeEditorInitialized)
+        {
+            _codeEditorInitialized = true;
+            await CodeEditorViewModel.InitializeAsync(CodeEditorWebView);
+        }
+        if (_isClosing) return;
+        var script = _scriptListViewModel.SelectedScript;
+        if (script is not null && _editorScriptId != script.Id)
+        {
+            _editorScriptId = script.Id;
+            await CodeEditorViewModel.LoadAsync(script.FilePath);
+        }
+        else if (script is not null && !CodeEditorViewModel.HasDocument)
+            await CodeEditorViewModel.LoadAsync(script.FilePath);
+    }
+
+    private async void OnNewFromTemplateClick(object sender, RoutedEventArgs e)
+    {
+        if (_dialogInFlight) return;
+        _dialogInFlight = true;
+        try
+        {
+            var dialog = _scriptTemplateDialogFactory();
+            dialog.XamlRoot = Content.XamlRoot;
+            var result = await dialog.ShowAsync();
+            if (result == ContentDialogResult.Primary && dialog.ViewModel.CreatedFilePath is { } path)
+            {
+                _scriptListViewModel.Load(path);
+                _fileTreeViewModel.Load();
+            }
+        }
+        catch (Exception ex) { DebugWriteUnexpected("Template", ex); }
+        finally { _dialogInFlight = false; }
     }
 
     private async void OnEditClick(object sender, RoutedEventArgs e)

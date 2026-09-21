@@ -8,6 +8,41 @@
 
 尚无未发布变更。
 
+## [2.0.0] - 2026-09-21
+
+### 新增
+
+- 新增离线代码编辑器，支持 Python 文件编码、BOM 与换行风格保留，外部修改冲突检测、安全保存、另存为和异常退出恢复草稿。
+- 新增内置基础与命令行脚本模板，可在已登记脚本目录内安全创建文件，拒绝路径穿越、保留名称和同名覆盖。
+- 新增可选 AI 代码助手，支持解释、重构、优化、查错和生成脚本，并支持 OpenAI Responses API 与用户配置的 OpenAI 兼容 HTTPS 服务。
+- 新增依赖检查与受控安装，可识别同目录 `requirements.txt`、预览 pip 变更计划、拦截危险来源、取消进程树并执行 `pip check`。
+- 新增终端字号设置、运行时长与 Job 峰值提交量记录，以及对应数据库迁移。
+
+### 安全与隐私
+
+- AI 功能默认关闭；API Key 仅存入 Windows Credential Locker，不写入设置文件。
+- AI 请求发送前展示服务地址、模型、代码范围、字符数、估算 token 与本地敏感信息扫描结果，并要求用户确认。
+- AI 输出按不可信文本处理，不自动执行命令、安装依赖、打开链接或保存文件；应用候选代码前再次校验源文件指纹并要求确认。
+- 依赖操作始终使用脚本选定的解释器，不回退到 PATH；安装前必须存在明确计划并由用户确认。
+- CodeMirror 编辑器资源随安装包离线分发并校验 SHA-256，不从 CDN 加载。
+
+### 改进
+
+- 终端与代码视图可在脚本详情区切换，未保存修改会阻止意外切换或关闭。
+- 运行记录新增持续时间与进程树峰值提交量，并保持历史数据库向前迁移兼容。
+- 中英文界面补充编辑器、AI、依赖管理和终端外观相关文本。
+
+### 验证
+
+- 新增编辑器安全保存、模板边界、依赖策略、AI 端点与流式响应、凭据抽象、补丁回滚、并发设置写入和数据库迁移验证。
+- Release x64 构建、完整自动验证、终端 Vendor 哈希和离线编辑器 Vendor 哈希均纳入 CI。
+
+### 已知限制
+
+- AI 服务及 Python 包索引可能由第三方收费或记录请求，发送代码和安装依赖前仍需用户自行审查。
+- 启发式敏感信息扫描可能误报或漏报，不能替代人工检查或安全审计。
+- Windows 安装包暂未进行代码签名，启动安装程序时 Windows 可能显示“未知发布者”或 SmartScreen 提示。
+
 ## [1.2.0] - 2026-09-13
 
 ### 新增
@@ -70,7 +105,8 @@
 
 - PyRunner 首个正式稳定版本。
 
-[Unreleased]: https://github.com/Ethereal-09/PyRunner/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/Ethereal-09/PyRunner/compare/v2.0.0...HEAD
+[2.0.0]: https://github.com/Ethereal-09/PyRunner/compare/v1.2.0...v2.0.0
 [1.2.0]: https://github.com/Ethereal-09/PyRunner/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/Ethereal-09/PyRunner/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/Ethereal-09/PyRunner/compare/v1.0.0...v1.0.1

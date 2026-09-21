@@ -21,6 +21,7 @@ integrity plus byte-for-byte SHA-256 comparison; see
 | Microsoft.Web.WebView2 SDK, bundled by Windows App SDK | 1.0.2210.55 | https://developer.microsoft.com/microsoft-edge/webview2/ | Microsoft Software License Terms | `licenses/third-party/Microsoft.Web.WebView2-LICENSE.txt` |
 | @xterm/xterm (`xterm.js`, `xterm.css`) | 5.5.0 | https://github.com/xtermjs/xterm.js | MIT | `licenses/third-party/xterm-5.5.0-LICENSE.txt` |
 | @xterm/addon-fit (`xterm-addon-fit.js`) | 0.10.0 | https://github.com/xtermjs/xterm.js/tree/master/addons/addon-fit | MIT | `licenses/third-party/xterm-addon-fit-0.10.0-LICENSE.txt` |
+| CodeMirror 6 and Lezer packages (`codemirror.bundle.js`) | versions pinned in `tools/editor-vendor/package-lock.json` | https://codemirror.net/ | MIT | `licenses/third-party/codemirror-6-LICENSE.txt` |
 
 Both xterm packages are sourced from `https://registry.npmjs.org/`. Their exact
 tarball URLs, npm integrity values, npm shasums, tarball SHA-256 values, and

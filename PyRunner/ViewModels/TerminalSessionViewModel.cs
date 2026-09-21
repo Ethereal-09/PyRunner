@@ -44,6 +44,7 @@ public partial class TerminalSessionViewModel : ObservableObject
     private CoreWebView2? _coreWebView;
     private DispatcherQueue? _dispatcher;
     private PtySession? _session;
+    private RunMetricsSnapshot _lastMetrics = new(null, null, "unavailable");
     private bool _sessionStarted;
 
     /// <summary>WebView2 控件引用（Phase D 评审必修 1）：Shutdown 时 Close 以阻断
@@ -56,6 +57,7 @@ public partial class TerminalSessionViewModel : ObservableObject
     private bool _shutdownRequested;
 
     private readonly ILocalizationService _localization;
+    private readonly ITerminalAppearanceService _appearance;
 
     /// <summary>当前状态栏文案的资源键与格式参数：语言热切换时据此重算 Status，
     /// 避免状态栏停留在切换前的旧语言文案（仅 UI 线程读写）。</summary>
@@ -64,6 +66,7 @@ public partial class TerminalSessionViewModel : ObservableObject
 
     public TerminalSessionViewModel(
         ILocalizationService localization,
+        ITerminalAppearanceService appearance,
         string commandLine,
         int scriptId,
         string displayName,
@@ -74,6 +77,7 @@ public partial class TerminalSessionViewModel : ObservableObject
         string? displayCommand = null)
     {
         _localization = localization;
+        _appearance = appearance;
         _commandLine = commandLine;
         ScriptId = scriptId;
         DisplayName = displayName;
@@ -84,6 +88,7 @@ public partial class TerminalSessionViewModel : ObservableObject
         _displayCommand = displayCommand;
         // 语言热切换：刷新当前状态栏文案；Shutdown 时退订（服务为单例，避免持有瞬态 VM）
         _localization.LanguageChanged += OnLanguageChanged;
+        _appearance.FontSizeChanged += ApplyFontSize;
         SetLocalizedStatus("Status_Initializing");
     }
 
@@ -113,6 +118,7 @@ public partial class TerminalSessionViewModel : ObservableObject
     /// <summary>Python 进程是否已真实启动（评审修复 3：InitializeTabAsync 失败路径
     /// 据此区分「从未启动 → AbortNotStarted 落库 Failed」与「已启动 → CloseSession 落库 Killed」）。</summary>
     public bool IsSessionStarted => _sessionStarted;
+    public RunMetricsSnapshot Metrics => _session?.Metrics ?? _lastMetrics;
 
     /// <summary>Shutdown 是否已请求（评审修复 3：初始化失败若由关标签/关窗口触发，
     /// 终结已由 CloseSession 完成，InitializeTabAsync 不再重复落库）。</summary>
@@ -162,7 +168,7 @@ public partial class TerminalSessionViewModel : ObservableObject
 
         coreWebView.WebMessageReceived += OnWebMessageReceived;
         var themeQuery = _isLightTheme ? "light" : "dark";
-        coreWebView.Navigate($"https://{VirtualHostName}/index.html?theme={themeQuery}");
+        coreWebView.Navigate($"https://{VirtualHostName}/index.html?theme={themeQuery}&fontSize={_appearance.FontSize}");
 #if DEBUG
         DebugLog.WriteLine("VM: 已发起导航 https://" + VirtualHostName + "/index.html");
 #endif
@@ -334,6 +340,7 @@ public partial class TerminalSessionViewModel : ObservableObject
         };
         session.ProcessExited += code =>
         {
+            _lastMetrics = session.Metrics;
 #if DEBUG
             DebugLog.WriteLine($"VM: ProcessExited code={code}");
 #endif
@@ -440,6 +447,10 @@ public partial class TerminalSessionViewModel : ObservableObject
     private void PostTerminalTheme() =>
         PostToHost(new { type = "theme", theme = _isLightTheme ? "light" : "dark" });
 
+    /// <summary>设置提交后同步字号；前端只在值变化时 fit，避免 resize 回路。</summary>
+    public void ApplyFontSize(int fontSize) =>
+        PostToHost(new { type = "fontSize", fontSize = Math.Clamp(fontSize, 10, 24) });
+
     /// <summary>快捷键 Ctrl+Shift+C：经 PostMessage 请求 xterm.js 的真实终端选区。</summary>
     public async Task CopySelectionAsync()
     {
@@ -483,8 +494,15 @@ public partial class TerminalSessionViewModel : ObservableObject
     public void ForceKill()
     {
         var session = _session;
+        if (session is not null) _lastMetrics = session.CaptureMetrics(complete: false);
         _session = null;
         session?.Dispose();
+    }
+
+    public void CaptureMetricsForShutdown()
+    {
+        if (_session is { } session)
+            _lastMetrics = session.CaptureMetrics(complete: false);
     }
 
     /// <summary>序列化 JSON 并经 PostWebMessageAsString 发给前端（必须 UI 线程）。</summary>
@@ -548,7 +566,9 @@ public partial class TerminalSessionViewModel : ObservableObject
         _copySelectionCompletion = null;
 
         _localization.LanguageChanged -= OnLanguageChanged;
+        _appearance.FontSizeChanged -= ApplyFontSize;
         var session = _session;
+        if (session is not null) _lastMetrics = session.CaptureMetrics(complete: false);
         _session = null;
         session?.Dispose();
 

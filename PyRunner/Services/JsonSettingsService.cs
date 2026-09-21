@@ -279,6 +279,7 @@ public sealed class JsonSettingsService : ISettingsService, IDisposable
         SavedTreeExpanded = source.SavedTreeExpanded,
         Language = source.Language,
         Theme = source.Theme,
+        TerminalFontSize = source.TerminalFontSize,
         TerminalAutoClear = source.TerminalAutoClear,
         NotifyOnFail = source.NotifyOnFail,
         LiveFlush = source.LiveFlush,

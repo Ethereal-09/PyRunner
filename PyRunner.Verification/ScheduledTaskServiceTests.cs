@@ -20,7 +20,7 @@ internal static class ScheduledTaskServiceTests
             using (var command = connection.CreateCommand())
             {
                 command.CommandText = "SELECT COALESCE(MAX(Version), 0) FROM SchemaVersion;";
-                Check(Convert.ToInt32(command.ExecuteScalar()) == 2, "scheduled-task migration is idempotent", ref failures);
+                Check(Convert.ToInt32(command.ExecuteScalar()) == 4, "scheduled-task migration remains idempotent after AI history migration", ref failures);
             }
 
             var scriptPath = Path.Combine(root, "scheduled.py");

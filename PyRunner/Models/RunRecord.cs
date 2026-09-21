@@ -14,6 +14,9 @@ public sealed class RunRecord
 
     /// <summary>运行输出（服务端按 200KB 保留尾部截断）。</summary>
     public string? Output { get; set; }
+    public long? DurationMs { get; set; }
+    public long? PeakJobMemoryBytes { get; set; }
+    public string? MetricsStatus { get; set; }
 
     /// <summary>DB 状态 → UI 状态机枚举。</summary>
     public RunStatus RunStatus => RunStatusMapping.FromDbString(Status);

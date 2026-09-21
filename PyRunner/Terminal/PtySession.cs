@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
 using static PyRunner.Terminal.ConPtyNative;
@@ -51,6 +52,11 @@ public sealed class PtySession : IDisposable
 
     /// <summary>原子防重入标志：0=未释放，1=已释放。</summary>
     private int _disposedFlag;
+    private Stopwatch? _duration;
+    private readonly object _metricsLock = new();
+    private RunMetricsSnapshot _metrics = new(null, null, "unavailable");
+
+    public RunMetricsSnapshot Metrics { get { lock (_metricsLock) return _metrics; } }
 
     private bool IsDisposed => Thread.VolatileRead(ref _disposedFlag) != 0;
 
@@ -208,6 +214,7 @@ public sealed class PtySession : IDisposable
 
         // 子进程挂入 Job 且宿主读写线程均就绪后才恢复主线程：避免极短命进程在
         // Job 纳管前派生子进程，也避免交互程序在输入写端消费线程就绪前读取 stdin。
+        _duration = Stopwatch.StartNew();
         var resumeResult = ResumeThread(processInfo.hThread);
         CloseHandle(processInfo.hThread);
         if (resumeResult == uint.MaxValue)
@@ -382,9 +389,15 @@ public sealed class PtySession : IDisposable
         if (GetExitCodeProcess(process, out var code))
             exitCode = unchecked((int)code);
 
-        // 与 Dispose 共用 TakeHandle：只有一方关闭进程句柄
+        // 根进程已终止后先释放其进程句柄。部分 Windows 版本会在最后一个句柄关闭前
+        // 继续把已终止进程计入 Job 的 ActiveProcesses；反向排序会令“等待归零”与
+        // “关闭句柄”互相等待。此处只关闭已由 WaitForSingleObject 确认终止的根进程，
+        // Job 句柄和其余子进程保持有效，后续仍可准确等待整棵进程树。
         if (TakeHandle(ref _process) != IntPtr.Zero)
             CloseHandle(process);
+
+        WaitForJobTreeExit();
+        CaptureMetrics(complete: !IsDisposed);
 
         // Dispose（用户关闭窗口）路径不等待排空，尽快退出；
         // 仅在正常退出路径等待读线程结束，超时 2 秒兜底（防管道未关闭时永久阻塞）
@@ -405,6 +418,54 @@ public sealed class PtySession : IDisposable
         }
 
         _dispatch(() => ProcessExited?.Invoke(exitCode));
+    }
+
+    public RunMetricsSnapshot CaptureMetrics(bool complete)
+    {
+        var elapsed = _duration?.ElapsedMilliseconds;
+        ulong? peak = null;
+        IntPtr job;
+        lock (_handleLock) { job = _job; }
+        if (job != IntPtr.Zero)
+        {
+            var size = Marshal.SizeOf<JOBOBJECT_EXTENDED_LIMIT_INFORMATION>();
+            var buffer = Marshal.AllocHGlobal(size);
+            try
+            {
+                if (QueryInformationJobObject(job, JobObjectExtendedLimitInformation, buffer, size, IntPtr.Zero))
+                {
+                    var info = Marshal.PtrToStructure<JOBOBJECT_EXTENDED_LIMIT_INFORMATION>(buffer);
+                    peak = info.PeakJobMemoryUsed.ToUInt64();
+                }
+            }
+            finally { Marshal.FreeHGlobal(buffer); }
+        }
+        var status = elapsed.HasValue && peak.HasValue && complete
+            ? "complete"
+            : elapsed.HasValue || peak.HasValue ? "partial" : "unavailable";
+        var snapshot = new RunMetricsSnapshot(elapsed, peak, status);
+        lock (_metricsLock) _metrics = snapshot;
+        return snapshot;
+    }
+
+    private void WaitForJobTreeExit()
+    {
+        while (!IsDisposed)
+        {
+            IntPtr job;
+            lock (_handleLock) { job = _job; }
+            if (job == IntPtr.Zero) return;
+            var size = Marshal.SizeOf<JOBOBJECT_BASIC_ACCOUNTING_INFORMATION>();
+            var buffer = Marshal.AllocHGlobal(size);
+            try
+            {
+                if (!QueryInformationJobObject(job, JobObjectBasicAccountingInformation, buffer, size, IntPtr.Zero)) return;
+                var info = Marshal.PtrToStructure<JOBOBJECT_BASIC_ACCOUNTING_INFORMATION>(buffer);
+                if (info.ActiveProcesses == 0) return;
+            }
+            finally { Marshal.FreeHGlobal(buffer); }
+            Thread.Sleep(25);
+        }
     }
 
     /// <summary>
@@ -510,3 +571,5 @@ public sealed class PtySession : IDisposable
         return builder.ToString();
     }
 }
+
+public sealed record RunMetricsSnapshot(long? DurationMs, ulong? PeakJobMemoryBytes, string Status);

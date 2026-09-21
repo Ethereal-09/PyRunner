@@ -391,6 +391,7 @@
   <data name="Nav_Settings" xml:space="preserve">
     <value>Settings</value>
   </data>
+  <data name="Nav_AI" xml:space="preserve"><value>AI</value></data>
   <data name="Sidebar_ResourceManager" xml:space="preserve">
     <value>· Explorer</value>
   </data>
@@ -687,4 +688,231 @@
   <data name="Schedule_Error_WeekdayRequired" xml:space="preserve"><value>Select at least one weekday.</value></data>
   <data name="Schedule_Error_IntervalInvalid" xml:space="preserve"><value>Interval must be at least one minute.</value></data>
   <data name="Weekday_Sun" xml:space="preserve"><value>Sun</value></data><data name="Weekday_Mon" xml:space="preserve"><value>Mon</value></data><data name="Weekday_Tue" xml:space="preserve"><value>Tue</value></data><data name="Weekday_Wed" xml:space="preserve"><value>Wed</value></data><data name="Weekday_Thu" xml:space="preserve"><value>Thu</value></data><data name="Weekday_Fri" xml:space="preserve"><value>Fri</value></data><data name="Weekday_Sat" xml:space="preserve"><value>Sat</value></data>
+  <data name="Button_Copy" xml:space="preserve"><value>Copy</value></data>
+  <data name="Dependency_Title" xml:space="preserve"><value>Python dependencies</value></data>
+  <data name="Dependency_NetworkNotice" xml:space="preserve"><value>Checking may contact package indexes for dependency metadata.</value></data>
+  <data name="Dependency_RequirementsLabel" xml:space="preserve"><value>Requirements</value></data>
+  <data name="Dependency_InterpreterLabel" xml:space="preserve"><value>Interpreter</value></data>
+  <data name="Dependency_Check" xml:space="preserve"><value>Check dependencies</value></data>
+  <data name="Dependency_Recheck" xml:space="preserve"><value>Check again</value></data>
+  <data name="Dependency_Install" xml:space="preserve"><value>Install dependencies</value></data>
+  <data name="Dependency_Details" xml:space="preserve"><value>Process details</value></data>
+  <data name="Dependency_Compatibility" xml:space="preserve"><value>Environment compatibility</value></data>
+  <data name="Dependency_Risks" xml:space="preserve"><value>Source warnings</value></data>
+  <data name="Dependency_Status_NoContext" xml:space="preserve"><value>Select a script and Python interpreter.</value></data>
+  <data name="Dependency_Status_NotChecked" xml:space="preserve"><value>Dependencies have not been checked</value></data>
+  <data name="Dependency_Status_NoFile" xml:space="preserve"><value>No requirements.txt found</value></data>
+  <data name="Dependency_Status_Checking" xml:space="preserve"><value>Checking dependencies…</value></data>
+  <data name="Dependency_Status_ConfirmationRequired" xml:space="preserve"><value>Additional confirmation is required for advanced dependency sources</value></data>
+  <data name="Dependency_Status_ConfirmationDeclined" xml:space="preserve"><value>Dependency check was not started</value></data>
+  <data name="Dependency_Status_Satisfied" xml:space="preserve"><value>All dependencies are satisfied</value></data>
+  <data name="Dependency_Status_Changes" xml:space="preserve"><value>{0} items need installation or changes</value></data>
+  <data name="Dependency_Status_Cancelled" xml:space="preserve"><value>Dependency operation cancelled; previous results are no longer installable</value></data>
+  <data name="Dependency_Status_Confirming" xml:space="preserve"><value>Waiting for installation confirmation</value></data>
+  <data name="Dependency_Status_Installing" xml:space="preserve"><value>Installing dependencies…</value></data>
+  <data name="Dependency_Status_InstallDeclined" xml:space="preserve"><value>Installation cancelled before pip was started</value></data>
+  <data name="Dependency_Status_InstallSucceeded" xml:space="preserve"><value>Dependencies installed and rechecked successfully</value></data>
+  <data name="Dependency_Status_InstallSucceededWithConflicts" xml:space="preserve"><value>Installation completed, but pip check reported environment conflicts</value></data>
+  <data name="Dependency_Status_InstallFailed" xml:space="preserve"><value>Installation did not complete; the environment may have changed</value></data>
+  <data name="Dependency_Status_Failed" xml:space="preserve"><value>Dependency check failed</value></data>
+  <data name="Dependency_Status_Expired" xml:space="preserve"><value>requirements.txt changed; check dependencies again</value></data>
+  <data name="Dependency_Error_ScriptMissing" xml:space="preserve"><value>The selected script is unavailable.</value></data>
+  <data name="Dependency_Error_InterpreterMissing" xml:space="preserve"><value>The selected Python interpreter is unavailable.</value></data>
+  <data name="Dependency_Error_ProcessStart" xml:space="preserve"><value>Python could not be started.</value></data>
+  <data name="Dependency_Error_PipUnavailable" xml:space="preserve"><value>pip is not available in the selected Python environment.</value></data>
+  <data name="Dependency_Error_PipList" xml:space="preserve"><value>Installed packages could not be read from pip.</value></data>
+  <data name="Dependency_Error_CheckFailed" xml:space="preserve"><value>pip could not resolve requirements.txt.</value></data>
+  <data name="Dependency_Error_TemporaryDirectory" xml:space="preserve"><value>The protected temporary report directory is unavailable.</value></data>
+  <data name="Dependency_Error_ReportInvalid" xml:space="preserve"><value>pip returned an invalid or oversized dependency report.</value></data>
+  <data name="Dependency_Error_ContextChanged" xml:space="preserve"><value>The script, interpreter, or dependency files changed. Check again.</value></data>
+  <data name="Dependency_Error_Timeout" xml:space="preserve"><value>The dependency operation timed out.</value></data>
+  <data name="Dependency_Error_PolicyBlocked" xml:space="preserve"><value>Unsafe or unsupported dependency sources blocked this operation.</value></data>
+  <data name="Dependency_Error_ResultInvalid" xml:space="preserve"><value>A current successful dependency check is required before installation.</value></data>
+  <data name="Dependency_Error_InterpreterBusy" xml:space="preserve"><value>Stop scripts using this Python environment before installing.</value></data>
+  <data name="Dependency_Error_PipCheck" xml:space="preserve"><value>pip check could not verify environment compatibility.</value></data>
+  <data name="Dependency_Error_RecheckFailed" xml:space="preserve"><value>Dependencies remain unsatisfied after installation. Review the refreshed result.</value></data>
+  <data name="Dependency_Risk_RecursiveDepth" xml:space="preserve"><value>Nested requirements exceed the eight-level limit</value></data>
+  <data name="Dependency_Risk_PathBlocked" xml:space="preserve"><value>A local dependency path is missing or leaves the script directory</value></data>
+  <data name="Dependency_Risk_ReparsePoint" xml:space="preserve"><value>A symbolic link or directory junction is not allowed for one-click installation</value></data>
+  <data name="Dependency_Risk_RecursiveCycle" xml:space="preserve"><value>Nested requirements contain a cycle</value></data>
+  <data name="Dependency_Risk_RemoteInclude" xml:space="preserve"><value>Remote requirements or constraint files are not allowed</value></data>
+  <data name="Dependency_Risk_TrustedHost" xml:space="preserve"><value>trusted-host weakens transport verification and is blocked</value></data>
+  <data name="Dependency_Risk_ExternalSource" xml:space="preserve"><value>An external package source requires additional confirmation</value></data>
+  <data name="Dependency_Risk_Editable" xml:space="preserve"><value>An editable installation may remain linked to source code</value></data>
+  <data name="Dependency_Risk_InsecureSource" xml:space="preserve"><value>A non-HTTPS or malformed external source is blocked</value></data>
+  <data name="Dependency_Risk_LocalSource" xml:space="preserve"><value>A local package source requires additional confirmation</value></data>
+  <data name="Dependency_Risk_UnsupportedOption" xml:space="preserve"><value>An unsupported requirements option is blocked</value></data>
+  <data name="Dependency_InspectConfirmTitle" xml:space="preserve"><value>Check advanced dependency sources?</value></data>
+  <data name="Dependency_InspectConfirmBody" xml:space="preserve"><value>pip may access the sources below and may run build backends while preparing metadata. Continue only if you trust them.</value></data>
+  <data name="Dependency_InstallConfirmTitle" xml:space="preserve"><value>Install Python dependencies?</value></data>
+  <data name="Dependency_InstallConfirmBody" xml:space="preserve"><value>Interpreter: {0}&#x0A;Path: {1}&#x0A;Requirements: {2}&#x0A;Planned changes: {3}&#x0A;&#x0A;Command: python.exe -m pip install --disable-pip-version-check --no-input -r requirements.txt</value></data>
+  <data name="Dependency_InstallCodeRisk" xml:space="preserve"><value>Installing Python packages may download from the internet and execute third-party build or installation code.</value></data>
+  <data name="Dependency_Item_Missing" xml:space="preserve"><value>Missing</value></data>
+  <data name="Dependency_Item_VersionMismatch" xml:space="preserve"><value>Version change</value></data>
+  <data name="Run_DependencyInstallInProgress" xml:space="preserve"><value>Dependencies are being installed into this Python environment. Wait for installation to finish.</value></data>
+  <data name="Button_Continue" xml:space="preserve"><value>Continue</value></data>
+  <data name="Workspace_Terminal" xml:space="preserve"><value>Terminal</value></data>
+  <data name="Workspace_Code" xml:space="preserve"><value>Code</value></data>
+  <data name="Editor_Save" xml:space="preserve"><value>Save</value></data>
+  <data name="Editor_Undo" xml:space="preserve"><value>Undo</value></data>
+  <data name="Editor_Redo" xml:space="preserve"><value>Redo</value></data>
+  <data name="Editor_OpenExternal" xml:space="preserve"><value>Open externally</value></data>
+  <data name="Editor_ReadOnly" xml:space="preserve"><value>Read-only</value></data>
+  <data name="Editor_Status_NoDocument" xml:space="preserve"><value>Select a registered Python script.</value></data>
+  <data name="Editor_Status_Ready" xml:space="preserve"><value>Ready</value></data>
+  <data name="Editor_Status_Saved" xml:space="preserve"><value>Saved</value></data>
+  <data name="Editor_Status_DraftRestored" xml:space="preserve"><value>Recovery draft restored; save to keep it.</value></data>
+  <data name="Editor_Status_ExternalChange" xml:space="preserve"><value>The file changed outside PyRunner.</value></data>
+  <data name="Editor_ReadOnly_LargeFile" xml:space="preserve"><value>Files larger than 2 MiB open read-only.</value></data>
+  <data name="Editor_ReadOnly_Permission" xml:space="preserve"><value>The file is read-only.</value></data>
+  <data name="Editor_UnsavedTitle" xml:space="preserve"><value>Save changes?</value></data>
+  <data name="Editor_UnsavedBody" xml:space="preserve"><value>This script has unsaved changes.</value></data>
+  <data name="Editor_Discard" xml:space="preserve"><value>Discard</value></data>
+  <data name="Editor_ConflictTitle" xml:space="preserve"><value>File changed externally</value></data>
+  <data name="Editor_ConflictBody" xml:space="preserve"><value>Choose how to handle the newer file on disk. Overwrite is never automatic.</value></data>
+  <data name="Editor_ConflictReload" xml:space="preserve"><value>Reload from disk</value></data>
+  <data name="Editor_ConflictSaveAs" xml:space="preserve"><value>Save as a new file</value></data>
+  <data name="Editor_ConflictOverwrite" xml:space="preserve"><value>Overwrite explicitly</value></data>
+  <data name="Editor_DraftTitle" xml:space="preserve"><value>Restore recovery draft?</value></data>
+  <data name="Editor_DraftBody" xml:space="preserve"><value>A matching unsaved recovery draft is available.</value></data>
+  <data name="Editor_DraftRestore" xml:space="preserve"><value>Restore</value></data>
+  <data name="Editor_Error_WebView" xml:space="preserve"><value>The code editor could not start.</value></data>
+  <data name="Editor_Error_Bridge" xml:space="preserve"><value>The editor did not return the current text.</value></data>
+  <data name="Editor_Error_LoadFailed" xml:space="preserve"><value>The script could not be loaded.</value></data>
+  <data name="Editor_Error_SaveFailed" xml:space="preserve"><value>The script could not be saved safely.</value></data>
+  <data name="Editor_Error_ExternalOpen" xml:space="preserve"><value>Windows could not open the script in its default app.</value></data>
+  <data name="Editor_Error_ExternalChange" xml:space="preserve"><value>The file changed outside PyRunner.</value></data>
+  <data name="Editor_Error_FileUnavailable" xml:space="preserve"><value>The selected registered script is unavailable.</value></data>
+  <data name="Editor_Error_FileTooLarge" xml:space="preserve"><value>The file is too large to display.</value></data>
+  <data name="Editor_Error_BinaryFile" xml:space="preserve"><value>Binary files cannot be opened in the editor.</value></data>
+  <data name="Editor_Error_EncodingUnsupported" xml:space="preserve"><value>The declared Python source encoding is unsupported.</value></data>
+  <data name="Editor_Error_NotPython" xml:space="preserve"><value>Only .py files are supported.</value></data>
+  <data name="Editor_Error_NotRegularFile" xml:space="preserve"><value>The selected path is not a regular file.</value></data>
+  <data name="Editor_Error_ReparsePoint" xml:space="preserve"><value>Symbolic links and directory junctions are not supported by the editor.</value></data>
+  <data name="Editor_Error_DraftTooLarge" xml:space="preserve"><value>The recovery draft is too large.</value></data>
+  <data name="Editor_Error_NotRegistered" xml:space="preserve"><value>Only a currently registered script can be opened.</value></data>
+  <data name="Template_New" xml:space="preserve"><value>New from template</value></data>
+  <data name="Template_Title" xml:space="preserve"><value>New Python script</value></data>
+  <data name="Template_Type" xml:space="preserve"><value>Template</value></data>
+  <data name="Template_Directory" xml:space="preserve"><value>Registered folder</value></data>
+  <data name="Template_FileName" xml:space="preserve"><value>File name</value></data>
+  <data name="Template_Preview" xml:space="preserve"><value>Preview (read-only)</value></data>
+  <data name="Template_Create" xml:space="preserve"><value>Create</value></data>
+  <data name="Template_BasicName" xml:space="preserve"><value>Basic script</value></data>
+  <data name="Template_BasicDescription" xml:space="preserve"><value>A small script with main and error handling.</value></data>
+  <data name="Template_CliName" xml:space="preserve"><value>Command-line script</value></data>
+  <data name="Template_CliDescription" xml:space="preserve"><value>An argparse-based command-line starting point.</value></data>
+  <data name="Template_Error_Directory" xml:space="preserve"><value>Select a valid registered folder.</value></data>
+  <data name="Template_Error_Name" xml:space="preserve"><value>Enter a valid Windows .py file name.</value></data>
+  <data name="Template_Error_AlreadyExists" xml:space="preserve"><value>A file with this name already exists.</value></data>
+  <data name="Template_Error_UnknownTemplate" xml:space="preserve"><value>The template is unavailable.</value></data>
+  <data name="Template_Error_CreateFailed" xml:space="preserve"><value>The script could not be created.</value></data>
+  <data name="Settings_TerminalAppearance" xml:space="preserve"><value>Terminal appearance</value></data>
+  <data name="Settings_TerminalFontSize" xml:space="preserve"><value>Font size (10–24)</value></data>
+  <data name="Settings_TerminalPreview" xml:space="preserve"><value>Preview</value></data>
+  <data name="Metrics_Summary" xml:space="preserve"><value>{0} · peak job commit {1}</value></data>
+  <data name="Metrics_Unavailable" xml:space="preserve"><value>Metrics unavailable</value></data>
++  <data name="AI_Settings_Group" xml:space="preserve"><value>AI code assistant</value></data>
+  <data name="AI_Page_Title" xml:space="preserve"><value>AI code assistant</value></data>
+  <data name="AI_Page_Subtitle" xml:space="preserve"><value>Continue a conversation around the current script. Changes are written only after confirmation.</value></data>
+  <data name="AI_History" xml:space="preserve"><value>History</value></data>
+  <data name="AI_NewConversation" xml:space="preserve"><value>New conversation</value></data>
+  <data name="AI_ConversationPlaceholder" xml:space="preserve"><value>Continue asking, or describe what you want to change…</value></data>
+  <data name="AI_AddContext" xml:space="preserve"><value>Add context</value></data>
+  <data name="AI_RemoveContext" xml:space="preserve"><value>Remove context file</value></data>
+  <data name="AI_ContextSummary" xml:space="preserve"><value>{0} files · {1:0.#} KB</value></data>
+  <data name="AI_ApplyChanges" xml:space="preserve"><value>Apply changes</value></data>
+  <data name="AI_ViewDiff" xml:space="preserve"><value>View diff</value></data>
+  <data name="AI_DiscardChanges" xml:space="preserve"><value>Discard</value></data>
+  <data name="AI_DeleteConversation" xml:space="preserve"><value>Delete</value></data>
+  <data name="AI_OpenConversation" xml:space="preserve"><value>Open</value></data>
+  <data name="AI_Copy" xml:space="preserve"><value>Copy</value></data>
+  <data name="AI_Retry" xml:space="preserve"><value>Retry</value></data>
+  <data name="AI_CodeFileFallback" xml:space="preserve"><value>script.py</value></data>
+  <data name="AI_Error_AmbiguousContextNames" xml:space="preserve"><value>Files with the same name cannot be used together in Generate changes mode.</value></data>
+  <data name="AI_EmptyTitle" xml:space="preserve"><value>What would you like to do with this script?</value></data>
+  <data name="AI_EmptyDescription" xml:space="preserve"><value>Use a quick prompt or write your own request below. Your files remain local until you confirm the send preview.</value></data>
+  <data name="AI_Mode_ReadOnly" xml:space="preserve"><value>Read-only analysis</value></data>
+  <data name="AI_Mode_Generate" xml:space="preserve"><value>Generate changes</value></data>
+  <data name="AI_ProposalTitle" xml:space="preserve"><value>Suggested changes to {0} file(s)</value></data>
+  <data name="AI_ProposalStats" xml:space="preserve"><value>+{0} / −{1} lines</value></data>
+  <data name="AI_Quick_Explain" xml:space="preserve"><value>Explain what this script does and identify its main control flow.</value></data>
+  <data name="AI_Quick_Diagnose" xml:space="preserve"><value>Check this script for likely defects and explain how to fix them.</value></data>
+  <data name="AI_Quick_Optimize" xml:space="preserve"><value>Suggest careful readability and performance improvements without changing behavior.</value></data>
+  <data name="AI_Quick_Refactor" xml:space="preserve"><value>Refactor this script while preserving its existing behavior.</value></data>
+  <data name="AI_Quick_Generate" xml:space="preserve"><value>Help me implement the change I describe for this script.</value></data>
+  <data name="AI_DeleteConversationTitle" xml:space="preserve"><value>Delete conversation?</value></data>
+  <data name="AI_DeleteConversationBody" xml:space="preserve"><value>“{0}” will be removed from local history. This cannot be undone.</value></data>
+  <data name="AI_UntitledConversation" xml:space="preserve"><value>Untitled conversation</value></data>
+  <data name="Button_Close" xml:space="preserve"><value>Close</value></data>
+  <data name="AI_Settings_Privacy" xml:space="preserve"><value>Your code is sent directly to the selected provider only after confirmation. The provider may charge for usage. PyRunner does not proxy requests or store prompts and responses.</value></data>
+  <data name="AI_Settings_Enabled" xml:space="preserve"><value>Enable AI features</value></data>
+  <data name="AI_Settings_Provider" xml:space="preserve"><value>Provider</value></data>
+  <data name="AI_Settings_Endpoint" xml:space="preserve"><value>API base address</value></data>
+  <data name="AI_Settings_Model" xml:space="preserve"><value>Model ID</value></data>
+  <data name="AI_Settings_Key" xml:space="preserve"><value>API key (stored in Windows Credential Locker; never displayed)</value></data>
+  <data name="AI_Settings_Save" xml:space="preserve"><value>Save AI settings</value></data>
+  <data name="AI_Settings_DeleteKey" xml:space="preserve"><value>Delete key</value></data>
+  <data name="AI_Settings_Test" xml:space="preserve"><value>Test connection</value></data>
+  <data name="AI_Settings_Saved" xml:space="preserve"><value>AI settings saved.</value></data>
+  <data name="AI_Settings_KeyDeleted" xml:space="preserve"><value>The credential was deleted.</value></data>
+  <data name="AI_Settings_Testing" xml:space="preserve"><value>Testing with a minimal request; this may incur provider charges…</value></data>
+  <data name="AI_Settings_TestSucceeded" xml:space="preserve"><value>Connection test succeeded.</value></data>
+  <data name="AI_Explain" xml:space="preserve"><value>Explain</value></data>
+  <data name="AI_Refactor" xml:space="preserve"><value>Refactor</value></data>
+  <data name="AI_Optimize" xml:space="preserve"><value>Optimize</value></data>
+  <data name="AI_Diagnose" xml:space="preserve"><value>Find issues</value></data>
+  <data name="AI_Generate" xml:space="preserve"><value>Write script</value></data>
+  <data name="AI_Stop" xml:space="preserve"><value>Stop</value></data>
+  <data name="AI_Send" xml:space="preserve"><value>Send</value></data>
+  <data name="AI_Apply" xml:space="preserve"><value>Apply to unsaved buffer</value></data>
+  <data name="AI_PromptPlaceholder" xml:space="preserve"><value>Optional goal, error text, or script request</value></data>
+  <data name="AI_OutputWarning" xml:space="preserve"><value>AI-generated content may be incorrect. Review it before saving or running.</value></data>
+  <data name="AI_SendPreviewTitle" xml:space="preserve"><value>Send code to AI provider?</value></data>
+  <data name="AI_SendPreviewBody" xml:space="preserve"><value>Host: {0}&#x0A;Model: {1}&#x0A;Scope: {2}&#x0A;Characters: {3}&#x0A;Estimated tokens: {4}&#x0A;Sensitive findings: {5}&#x0A;&#x0A;The provider may charge for this request.</value></data>
+  <data name="AI_SecretWarning" xml:space="preserve"><value>Possible sensitive information was detected. The preview is masked; return and remove it unless you explicitly intend to send the original content.</value></data>
+  <data name="AI_ApplyTitle" xml:space="preserve"><value>Apply AI candidate?</value></data>
+  <data name="AI_Status_Idle" xml:space="preserve"><value>Enter to send · Shift+Enter for a new line · Esc to stop</value></data>
+  <data name="AI_Status_AwaitingConfirmation" xml:space="preserve"><value>Review the exact send scope.</value></data>
+  <data name="AI_Status_Streaming" xml:space="preserve"><value>Receiving response…</value></data>
+  <data name="AI_Status_ReadingFiles" xml:space="preserve"><value>Reading and analyzing {0} confirmed file(s)…</value></data>
+  <data name="AI_Status_Completed" xml:space="preserve"><value>Response complete.</value></data>
+  <data name="AI_Status_Reviewable" xml:space="preserve"><value>Candidate ready for review; it has not been applied.</value></data>
+  <data name="AI_Status_Cancelled" xml:space="preserve"><value>Request cancelled. Partial output cannot be applied.</value></data>
+  <data name="AI_Status_AppliedToBuffer" xml:space="preserve"><value>Applied to the unsaved editor buffer. Save and run remain separate actions.</value></data>
+  <data name="AI_Status_AppliedWithBackup" xml:space="preserve"><value>Changes applied safely. A recoverable local backup was created.</value></data>
+  <data name="AI_Status_ProposalDiscarded" xml:space="preserve"><value>The proposed changes were discarded.</value></data>
+  <data name="AI_Status_GeneratedDraft" xml:space="preserve"><value>Generated script opened as an unsaved draft.</value></data>
+  <data name="AI_GeneratedDraftName" xml:space="preserve"><value>Generated script (unsaved)</value></data>
+  <data name="AI_UntitledScript" xml:space="preserve"><value>Generated script (unsaved)</value></data>
+  <data name="AI_Usage" xml:space="preserve"><value>Input tokens: {0}; output tokens: {1}</value></data>
+  <data name="AI_RetryAfter" xml:space="preserve"><value>Retry after about {0} seconds.</value></data>
+  <data name="AI_RequestId" xml:space="preserve"><value>Request ID: {0}</value></data>
+  <data name="AI_Error_Disabled" xml:space="preserve"><value>Enable and configure AI in Settings first.</value></data>
+  <data name="AI_Error_MissingCredential" xml:space="preserve"><value>No API key is stored for this provider and host.</value></data>
+  <data name="AI_Error_InvalidCredential" xml:space="preserve"><value>The API key is empty or too long.</value></data>
+  <data name="AI_Error_InvalidEndpoint" xml:space="preserve"><value>Enter a valid permitted API base address.</value></data>
+  <data name="AI_Error_HttpsRequired" xml:space="preserve"><value>The AI address must use HTTPS.</value></data>
+  <data name="AI_Error_InvalidModel" xml:space="preserve"><value>Enter a valid model ID.</value></data>
+  <data name="AI_Error_PromptRequired" xml:space="preserve"><value>Describe the script you want to create.</value></data>
+  <data name="AI_Error_NoContext" xml:space="preserve"><value>Select or open a Python script first.</value></data>
+  <data name="AI_Error_Unauthorized" xml:space="preserve"><value>The API key is invalid or lacks permission for this model.</value></data>
+  <data name="AI_Error_RateLimited" xml:space="preserve"><value>The provider rate-limited this request. It was not retried automatically.</value></data>
+  <data name="AI_Error_Server" xml:space="preserve"><value>The provider returned a server error. Retry manually if appropriate.</value></data>
+  <data name="AI_Error_Network" xml:space="preserve"><value>The secure connection to the provider failed.</value></data>
+  <data name="AI_Error_Timeout" xml:space="preserve"><value>The AI request timed out.</value></data>
+  <data name="AI_Error_Cancelled" xml:space="preserve"><value>The AI request was cancelled.</value></data>
+  <data name="AI_Error_ResponseTooLarge" xml:space="preserve"><value>The provider response exceeded the local size limit.</value></data>
+  <data name="AI_Error_InvalidResponse" xml:space="preserve"><value>The provider returned an invalid or incomplete response.</value></data>
+  <data name="AI_Error_InvalidStructuredResponse" xml:space="preserve"><value>The response did not contain a safe, reviewable code candidate.</value></data>
+  <data name="AI_Error_RequestFailed" xml:space="preserve"><value>The AI request failed without exposing request content or credentials.</value></data>
+  <data name="AI_Error_Redirect" xml:space="preserve"><value>The provider attempted a redirect, so the request was blocked.</value></data>
+  <data name="AI_Error_SourceChanged" xml:space="preserve"><value>The source selection changed. This result cannot be applied directly.</value></data>
+  <data name="AI_Error_ContextTooLarge" xml:space="preserve"><value>The selected content is too large. Select a smaller range.</value></data>
+  <data name="AI_Error_InvalidContextFile" xml:space="preserve"><value>Only valid Python context files are allowed.</value></data>
+  <data name="AI_Error_ContextLoadFailed" xml:space="preserve"><value>One or more context files could not be read safely.</value></data>
+  <data name="AI_Error_InvalidPatch" xml:space="preserve"><value>The proposed patch targets an invalid or unconfirmed file.</value></data>
+  <data name="AI_Error_ApplyFailed" xml:space="preserve"><value>The change could not be applied; original files were preserved or restored.</value></data>
+  <data name="AI_Error_UnsavedEditor" xml:space="preserve"><value>Save or discard editor changes before applying an AI patch.</value></data>
+  <data name="Help_AiPrivacySummary" xml:space="preserve"><value>AI is optional and off by default. Confirmed code is sent directly to the configured provider and may incur charges; output is untrusted and never runs or saves automatically.</value></data>
 </root>

@@ -27,9 +27,12 @@ const terminalThemes = {
 };
 
 const initialThemeName = document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
+const requestedFontSize = Number.parseInt(new URLSearchParams(window.location.search).get('fontSize') || '13', 10);
+const initialFontSize = Number.isInteger(requestedFontSize) && requestedFontSize >= 10 && requestedFontSize <= 24
+  ? requestedFontSize : 13;
 const term = new Terminal({
   cursorBlink: true,
-  fontSize: 13,
+  fontSize: initialFontSize,
   lineHeight: 1.7,
   fontFamily: 'Cascadia Mono, Consolas, monospace',
   theme: terminalThemes[initialThemeName],
@@ -74,6 +77,12 @@ window.chrome.webview.addEventListener('message', (e) => {
     const themeName = msg.theme === 'light' ? 'light' : 'dark';
     document.documentElement.dataset.theme = themeName;
     term.options.theme = terminalThemes[themeName];
+  } else if (msg.type === 'fontSize') {
+    const fontSize = Number(msg.fontSize);
+    if (Number.isInteger(fontSize) && fontSize >= 10 && fontSize <= 24 && term.options.fontSize !== fontSize) {
+      term.options.fontSize = fontSize;
+      requestAnimationFrame(() => fitAddon.fit());
+    }
   } else if (msg.type === 'connected') {
     // 后端就绪：同步当前终端尺寸，保证 ConPTY 与 xterm 行列一致
     sendToHost({ type: 'resize', cols: term.cols, rows: term.rows });
