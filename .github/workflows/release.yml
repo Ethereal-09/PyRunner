@@ -364,6 +364,9 @@ jobs:
     needs: publish-release
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    concurrency:
+      group: pyrunner-pages-deploy
+      cancel-in-progress: false
     permissions:
       contents: read
       pages: write

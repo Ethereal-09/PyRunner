@@ -1,0 +1,77 @@
+name: PyRunner Website
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy-website:
+    name: Deploy website and preserve update manifest
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    concurrency:
+      group: pyrunner-pages-deploy
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Stage website and preserve verified update manifest
+        shell: pwsh
+        env:
+          UPDATE_MANIFEST_URL: https://ethereal-09.github.io/PyRunner/update.json
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $site = './pages-site'
+          New-Item -ItemType Directory -Path $site -Force | Out-Null
+          Copy-Item -LiteralPath './tools/release/pages-index.html' -Destination "$site/index.html"
+
+          $handler = [Net.Http.HttpClientHandler]::new()
+          $handler.AllowAutoRedirect = $false
+          $client = [Net.Http.HttpClient]::new($handler)
+          $client.Timeout = [TimeSpan]::FromSeconds(30)
+          try {
+            $request = [Net.Http.HttpRequestMessage]::new([Net.Http.HttpMethod]::Get, $env:UPDATE_MANIFEST_URL)
+            $request.Headers.CacheControl = [Net.Http.Headers.CacheControlHeaderValue]::Parse('no-cache')
+            $response = $client.Send($request)
+            if ($response.StatusCode -ne [Net.HttpStatusCode]::OK) {
+              throw "Current update manifest returned HTTP $([int]$response.StatusCode); refusing website deployment."
+            }
+            $bytes = $response.Content.ReadAsByteArrayAsync().GetAwaiter().GetResult()
+            [IO.File]::WriteAllBytes("$site/update.json", $bytes)
+          }
+          finally {
+            $client.Dispose()
+            $handler.Dispose()
+          }
+
+          $manifest = Get-Content -LiteralPath "$site/update.json" -Raw | ConvertFrom-Json
+          if ($manifest.schemaVersion -ne 1 -or $manifest.draft -ne $false -or
+              $manifest.prerelease -ne $false -or
+              [string]::IsNullOrWhiteSpace([string]$manifest.version) -or
+              $manifest.tag -cne "v$($manifest.version)" -or
+              @($manifest.assets).Count -ne 1) {
+            throw 'Current update manifest failed the website deployment safety check.'
+          }
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4
+        with:
+          path: pages-site
+
+      - name: Deploy Pages
+        id: deployment
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
+
