@@ -31,6 +31,7 @@ public sealed partial class SidebarView : UserControl
 
     /// <summary>「删除」请求（项右键/更多菜单；确认对话框在 MainWindow）。</summary>
     public event EventHandler<ScriptListItemViewModel>? DeleteRequested;
+    public event EventHandler<string>? DeleteFileRequested;
 
     /// <summary>「运行」请求（列表项右键/更多菜单；窗口接 RunCoordinator）。</summary>
     public event EventHandler<ScriptListItemViewModel>? RunRequested;
@@ -201,9 +202,6 @@ public sealed partial class SidebarView : UserControl
     private void OnRefreshClick(object sender, RoutedEventArgs e) =>
         RefreshRequested?.Invoke(this, EventArgs.Empty);
 
-    /// <summary>侧栏齿轮入口：复用主窗口设置弹窗。</summary>
-    private void OnSidebarSettingsClick(object sender, RoutedEventArgs e) =>
-        OpenSettingsRequested?.Invoke(this, EventArgs.Empty);
 
     /// <summary>快捷键 Ctrl+F 消费：聚焦搜索框。</summary>
     public void FocusSearchBox() => SidebarSearchBox.Focus(FocusState.Programmatic);
@@ -296,6 +294,13 @@ public sealed partial class SidebarView : UserControl
             flyout.Items.Add(MakeTreeMenuItem("Content.MenuNotebookText", OnMenuNotebookTreeClick));
         if (_treeViewModel?.CanToggleFavoriteNode(content) == true)
             flyout.Items.Add(MakeTreeMenuItem("Content.MenuFavoriteText", OnMenuFavoriteTreeClick));
+        if (content is FileTreeNodeViewModel { Kind: FileTreeNodeKind.PyFile })
+        {
+            flyout.Items.Add(new MenuFlyoutSeparator());
+            var delete = MakeTreeMenuItem("Content.MenuDeleteFileText", OnMenuDeleteFileTreeClick);
+            delete.SetValue(Microsoft.UI.Xaml.Automation.AutomationProperties.AutomationIdProperty, "TreeDeleteScriptFile");
+            flyout.Items.Add(delete);
+        }
     }
 
     /// <summary>树菜单条目工厂：Text 绑定 TreeViewNode.Content 的展示属性。</summary>
@@ -305,6 +310,14 @@ public sealed partial class SidebarView : UserControl
         item.SetBinding(MenuFlyoutItem.TextProperty, new Binding { Path = new PropertyPath(bindingPath) });
         item.Click += onClick;
         return item;
+    }
+
+    private void OnMenuDeleteFileTreeClick(object sender, RoutedEventArgs e)
+    {
+        var content = ((sender as FrameworkElement)?.DataContext as TreeViewNode)?.Content;
+        DialogHostHelper.CloseContainingFlyoutPopup(sender as DependencyObject);
+        if (content is FileTreeNodeViewModel { Kind: FileTreeNodeKind.PyFile } node)
+            DeleteFileRequested?.Invoke(this, node.FullPath);
     }
 
     /// <summary>树节点右键「运行」：DataContext 为 TreeViewNode，转 VM 后由文件树 VM 过滤上抛。</summary>

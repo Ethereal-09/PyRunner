@@ -62,6 +62,7 @@ public sealed partial class FileTreeNodeViewModel : ObservableObject
     /// <summary>右键「运行」菜单文字（仅已登记 .py 节点注入，其余空串）。</summary>
     public string MenuRunText { get; set; } = string.Empty;
     public string MenuScheduleText { get; set; } = string.Empty;
+    public string MenuDeleteFileText { get; set; } = string.Empty;
 
     /// <summary>右键「在记事本中打开」菜单文字（Phase E；仅 .py 节点注入）。</summary>
     public string MenuNotebookText { get; set; } = string.Empty;
@@ -279,6 +280,7 @@ public sealed partial class FileTreeViewModel : ObservableObject
                 MenuRunText = MenuRunText,
                 MenuScheduleText = MenuScheduleText,
                 MenuNotebookText = MenuNotebookText,
+                MenuDeleteFileText = _localization["Menu_DeleteFile"],
                 MenuFavoriteText = MenuRemoveFavoriteText,
                 IsRegistered = true,
                 IsFavorite = true,
@@ -614,6 +616,7 @@ public sealed partial class FileTreeViewModel : ObservableObject
                     MenuRunText = MenuRunText,
                     MenuScheduleText = registered ? MenuScheduleText : string.Empty,
                     MenuNotebookText = MenuNotebookText,
+                    MenuDeleteFileText = _localization["Menu_DeleteFile"],
                     MenuFavoriteText = registered
                         ? (script!.IsFavorite ? MenuRemoveFavoriteText : MenuAddFavoriteText)
                         : string.Empty,

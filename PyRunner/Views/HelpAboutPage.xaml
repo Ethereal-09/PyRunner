@@ -89,8 +89,7 @@
                                 FontSize="12.5"
                                 Foreground="{ThemeResource TextBodyBrush}"
                                 TextWrapping="Wrap" />
-                            <TextBlock Text="{Binding AiPrivacySummary}" FontSize="11.5"
-                                       Foreground="{ThemeResource TextMutedBrush}" TextWrapping="Wrap" />
+
                         </StackPanel>
                     </Grid>
                 </Border>

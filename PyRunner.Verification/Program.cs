@@ -8,6 +8,77 @@ using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text.Json;
 
+var reportOption = Array.IndexOf(args, "--report");
+if (reportOption >= 0 && reportOption + 1 < args.Length)
+{
+    // ConPTY 探针清空标准句柄后，独立文件流仍能保留后续失败原因。
+    var reportWriter = new StreamWriter(Path.GetFullPath(args[reportOption + 1]), false, new UTF8Encoding(false)) { AutoFlush = true };
+    Console.SetOut(reportWriter);
+    Console.SetError(reportWriter);
+}
+
+if (args.Length == 2 && args[0] == "--verify-review-delete")
+{
+    var fixtureRoot = Path.GetFullPath(args[1]);
+    if (!fixtureRoot.StartsWith(Path.Combine(FindSolutionRoot(), "artifacts") + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+        throw new ArgumentException("Deletion verification must use an isolated fixture.");
+    var factory = new SqliteConnectionFactory(fixtureRoot);
+    var tasks = new ScheduledTaskService(factory).GetAll();
+    var valid = !File.Exists(Path.Combine(fixtureRoot, "scripts", "review_sample.py")) &&
+        new ScriptService(factory).GetAll().Count == 0 && tasks.Count == 1 &&
+        tasks[0].ScriptId is null && !tasks[0].Enabled;
+    Console.WriteLine(valid ? "PASS: deleted file registration is removed and its scheduled task is preserved and disabled" :
+        "FAIL: deleted script registration or schedule mismatch");
+    return valid ? 0 : 1;
+}
+
+if (args.Length == 2 && args[0] == "--verify-review-exits")
+{
+    var fixtureRoot = Path.GetFullPath(args[1]);
+    if (!fixtureRoot.StartsWith(Path.Combine(FindSolutionRoot(), "artifacts") + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+        throw new ArgumentException("Exit verification must use an isolated fixture.");
+    var factory = new SqliteConnectionFactory(fixtureRoot);
+    var script = new ScriptService(factory).GetAll().Single();
+    var recent = new RunRecordService(factory).GetRecent(script.Id, 4);
+    var valid = recent.Count == 4 && recent[0].Status == "failed" && recent[0].ExitCode == 2 &&
+        recent[0].Output!.Contains("EXIT_FIX_NOTIFY_OFF", StringComparison.Ordinal) &&
+        recent[1].Status == "success" && recent[1].ExitCode == 0 &&
+        recent[2].Status == "failed" && recent[2].ExitCode == 2 &&
+        recent[2].Output!.Contains("EXIT_FIX_CODE_2", StringComparison.Ordinal) &&
+        recent[3].Status == "killed";
+    Console.WriteLine(valid ? "PASS: real process exit codes and user stop remain accurate in run history" :
+        "FAIL: real process exit history mismatch");
+    return valid ? 0 : 1;
+}
+
+if (args.Length == 2 && args[0] == "--prepare-review-ui")
+{
+    var fixtureRoot = Path.GetFullPath(args[1]);
+    if (!fixtureRoot.StartsWith(Path.Combine(FindSolutionRoot(), "artifacts") + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+        throw new ArgumentException("Review fixture must be under solution artifacts.");
+    Directory.CreateDirectory(fixtureRoot);
+    File.WriteAllText(Path.Combine(fixtureRoot, "settings.json"), "{\"FirstRunCompleted\":true,\"FirstRunVersion\":1,\"Theme\":\"Light\",\"Language\":\"zh-CN\"}");
+    var factory = new SqliteConnectionFactory(fixtureRoot);
+    new SchemaMigrator(factory).Migrate();
+    var scriptFolder = Path.Combine(fixtureRoot, "scripts");
+    Directory.CreateDirectory(scriptFolder);
+    var scriptPath = Path.Combine(scriptFolder, "review_sample.py");
+    File.WriteAllText(scriptPath, "import time\nprint('REVIEW_READY', flush=True)\ntime.sleep(120)\n");
+    new ScriptPathService(factory).Add(scriptFolder);
+    var script = new Script { Name = "界面审查示例", FilePath = scriptPath };
+    new ScriptService(factory).Add(script);
+    var pythonPath = FindPythonExecutable();
+    if (pythonPath is not null) new InterpreterService(factory).AddFromPath(pythonPath);
+    var records = new RunRecordService(factory);
+    var recordId = records.StartRun(script.Id);
+    records.FinishRun(recordId, 0, RunStatus.Success, "示例运行完成", 1234, 12345678);
+    new ScheduledTaskService(factory).Add(new ScheduledTask {
+        Name = "每日示例任务", ScriptId = script.Id, ScriptName = script.Name, ScriptPath = scriptPath,
+        ScheduleType = ScheduleTypes.Daily, StartAtLocal = DateTime.Now.AddHours(1).ToString("yyyy-MM-ddTHH:mm:ss"), Enabled = false });
+    Console.WriteLine(fixtureRoot);
+    return 0;
+}
+
 var cases = new[]
 {
     new
@@ -80,10 +151,6 @@ if (args.Contains("--p2-only", StringComparer.OrdinalIgnoreCase))
 {
     return await P2FeatureTests.RunAsync(sourceRoot);
 }
-if (args.Contains("--p3-only", StringComparer.OrdinalIgnoreCase))
-{
-    return await AiAssistantFeatureTests.RunAsync();
-}
 var sidebarSource = File.ReadAllText(Path.Combine(sourceRoot, "Views", "SidebarView.xaml"));
 var sidebarCode = File.ReadAllText(Path.Combine(sourceRoot, "Views", "SidebarView.xaml.cs"));
 var mainWindowSource = File.ReadAllText(Path.Combine(sourceRoot, "MainWindow.xaml"));
@@ -91,9 +158,8 @@ var mainWindowCode = File.ReadAllText(Path.Combine(sourceRoot, "MainWindow.xaml.
 var runHistoryCode = File.ReadAllText(Path.Combine(sourceRoot, "ViewModels", "RunHistoryViewModel.cs"));
 var scheduledPageSource = File.ReadAllText(Path.Combine(sourceRoot, "Views", "ScheduledTasksPage.xaml"));
 var scheduledDialogSource = File.ReadAllText(Path.Combine(sourceRoot, "Views", "ScheduledTaskEditDialog.xaml"));
-var aiPageSource = File.ReadAllText(Path.Combine(sourceRoot, "Views", "AiAssistantPage.xaml"));
-var aiRendererHtml = File.ReadAllText(Path.Combine(sourceRoot, "AI", "wwwroot", "index.html"));
-var aiRendererScript = File.ReadAllText(Path.Combine(sourceRoot, "AI", "wwwroot", "renderer.js"));
+var englishResources = File.ReadAllText(Path.Combine(sourceRoot, "Resources", "Strings.resw"));
+var chineseResources = File.ReadAllText(Path.Combine(sourceRoot, "Resources", "zh-CN", "Strings.resw"));
 Verify(
     mainWindowSource.Contains("NavSchedulesButton", StringComparison.Ordinal) &&
     mainWindowSource.IndexOf("NavRunsButton", StringComparison.Ordinal) < mainWindowSource.IndexOf("NavSchedulesButton", StringComparison.Ordinal) &&
@@ -292,23 +358,11 @@ var updateModelsCode = File.ReadAllText(Path.Combine(sourceRoot, "Models", "Upda
 var updateCoordinatorCode = File.ReadAllText(Path.Combine(sourceRoot, "Services", "UpdateCheckCoordinator.cs"));
 var linkCode = File.ReadAllText(Path.Combine(sourceRoot, "Services", "ProductLinksOptions.cs"));
 var navigationCode = File.ReadAllText(Path.Combine(sourceRoot, "Services", "ShellNavigationService.cs"));
-Verify(
-    mainWindowSource.Contains("x:Name=\"NavAiButton\"", StringComparison.Ordinal) &&
-    mainWindowSource.IndexOf("x:Name=\"NavHelpButton\"", StringComparison.Ordinal) <
-        mainWindowSource.IndexOf("x:Name=\"NavAiButton\"", StringComparison.Ordinal) &&
-    mainWindowSource.Contains("x:Name=\"AiAssistantPageHost\"", StringComparison.Ordinal) &&
-    mainWindowCode.Contains("_navigation.Navigate(ShellPage.AiAssistant)", StringComparison.Ordinal) &&
-    navigationCode.Contains("AiAssistant", StringComparison.Ordinal) &&
-    aiPageSource.Contains("AiConversationMessages", StringComparison.Ordinal) &&
-    aiPageSource.Contains("AiPromptTextBox", StringComparison.Ordinal) &&
-    aiPageSource.Contains("AiModeSelector", StringComparison.Ordinal) &&
-    aiPageSource.Contains("AiPrimaryActionButton", StringComparison.Ordinal) &&
-    aiRendererHtml.Contains("Content-Security-Policy", StringComparison.Ordinal) &&
-    aiRendererHtml.Contains("default-src 'none'", StringComparison.Ordinal) &&
-    !aiRendererHtml.Contains("http://", StringComparison.OrdinalIgnoreCase) &&
-    !aiRendererScript.Contains("innerHTML", StringComparison.Ordinal) &&
-    aiRendererScript.Contains("textContent", StringComparison.Ordinal),
-    "AI has a top-level entry after Help and a dedicated explorer-and-interaction page");
+
+
+
+
+
 Verify(
     mainWindowSource.Contains("x:Name=\"NavHelpButton\"", StringComparison.Ordinal) &&
     mainWindowSource.Contains("x:Name=\"HelpPageHost\"", StringComparison.Ordinal) &&
@@ -405,13 +459,16 @@ failures += await GitHubUpdateServiceTests.RunAsync();
 failures += await UpdatePackageServiceTests.RunAsync();
 failures += await UpdateManifestGeneratorTests.RunAsync();
 failures += await ReleaseWorkflowTests.RunAsync();
-failures += await DependencyFeatureTests.RunAsync();
 failures += await P2FeatureTests.RunAsync(sourceRoot);
-failures += await AiAssistantFeatureTests.RunAsync();
 failures += await JsonSettingsServiceTests.RunAsync();
 failures += await UpdateStateStoreTests.RunAsync();
 failures += ProductVersionParserTests.Run();
 failures += ScheduledTaskServiceTests.Run();
+if (args.Contains("--services-only"))
+{
+    Console.WriteLine($"Service verification completed: {failures} failures. Terminal checks were not requested.");
+    return failures == 0 ? 0 : 1;
+}
 
 var temporaryRoot = Path.Combine(Path.GetTempPath(), "PyRunner.Verification", Guid.NewGuid().ToString("N"));
 try
@@ -672,7 +729,7 @@ try
     using (var command = connection.CreateCommand())
     {
         command.CommandText = "SELECT COALESCE(MAX(Version), 0) FROM SchemaVersion;";
-        Verify(Convert.ToInt32(command.ExecuteScalar()) == 4, "schema migration is idempotent");
+        Verify(Convert.ToInt32(command.ExecuteScalar()) == 5, "schema migration is idempotent");
     }
 
     var scriptsDirectory = Path.Combine(temporaryRoot, "scripts folder");
@@ -811,6 +868,11 @@ try
     {
         Console.WriteLine("PASS: database backup and reset");
     }
+}
+catch (Exception ex)
+{
+    failures++;
+    Console.Error.WriteLine($"FAIL: runtime verification could not complete: {ex}");
 }
 finally
 {

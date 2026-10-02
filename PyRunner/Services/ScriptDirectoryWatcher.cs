@@ -154,17 +154,19 @@ public sealed class ScriptDirectoryWatcher : IScriptDirectoryWatcher
 
     private void OnFileSystemEvent(object sender, FileSystemEventArgs e)
     {
-        // 未设 Filter：仅 .py 文件相关变化参与触发（目录增删经 DirectoryName 通知无需过滤）
-        if (e.Name?.EndsWith(".py", StringComparison.OrdinalIgnoreCase) != true) return;
+        // 删除后无法再读取目录属性，必须保守刷新；创建时忽略普通输出文件。
+        if (e.ChangeType != WatcherChangeTypes.Deleted && !Directory.Exists(e.FullPath)
+            && e.Name?.EndsWith(".py", StringComparison.OrdinalIgnoreCase) != true) return;
         MarkDirty();
     }
 
     private void OnRenamedEvent(object sender, RenamedEventArgs e)
     {
         // 任一侧为 .py 即视为脚本集合变化（.py→txt 删除语义、txt→.py 新增语义）
-        if (e.Name?.EndsWith(".py", StringComparison.OrdinalIgnoreCase) == true ||
-            e.OldName?.EndsWith(".py", StringComparison.OrdinalIgnoreCase) == true)
-            MarkDirty();
+        if (!Directory.Exists(e.FullPath)
+            && e.Name?.EndsWith(".py", StringComparison.OrdinalIgnoreCase) != true
+            && e.OldName?.EndsWith(".py", StringComparison.OrdinalIgnoreCase) != true) return;
+        MarkDirty();
     }
 
     /// <summary>Error（多为缓冲溢出）：销毁并按原路径重建；重建失败放弃该路径（Resync 兜底）。</summary>

@@ -34,6 +34,18 @@ public sealed class RunRecordService : IRunRecordService
         _connectionFactory = connectionFactory;
     }
 
+    /// <summary>仅由持有应用单实例锁的启动流程调用，恢复上次进程遗留的运行状态。</summary>
+    public void RecoverInterruptedRuns()
+    {
+        using var connection = _connectionFactory.CreateOpenConnection();
+        using var transaction = connection.BeginTransaction();
+        connection.Execute(@"UPDATE RunRecord SET Status='failed', FinishedAt=@Now, MetricsStatus='interrupted'
+            WHERE Status='running';
+            UPDATE ScheduledTask SET LastResult='failed',LastErrorKey='Run_Interrupted',UpdatedAt=@Now
+            WHERE LastResult='running';", new { Now = TimeFormat.UtcNowIso() }, transaction);
+        transaction.Commit();
+    }
+
     public int StartRun(int scriptId)
     {
         var now = TimeFormat.UtcNowIso();

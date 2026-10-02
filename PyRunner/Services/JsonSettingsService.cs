@@ -275,6 +275,7 @@ public sealed class JsonSettingsService : ISettingsService, IDisposable
     private static AppSettings Clone(AppSettings source) => new()
     {
         SidebarWidth = source.SidebarWidth,
+        SidebarCollapsed = source.SidebarCollapsed,
         UiLayoutVersion = source.UiLayoutVersion,
         SavedTreeExpanded = source.SavedTreeExpanded,
         Language = source.Language,
@@ -289,6 +290,7 @@ public sealed class JsonSettingsService : ISettingsService, IDisposable
         FirstRunVersion = source.FirstRunVersion,
         LastUpdateCheckAttemptUtc = source.LastUpdateCheckAttemptUtc,
         LastSuccessfulUpdateCheck = source.LastSuccessfulUpdateCheck,
+        // 漏复制会让每次 Current/Update 都回退到默认值，表现为启用开关无法保存。
     };
 
     private void LogDiagnostic(string message, Exception? exception = null)

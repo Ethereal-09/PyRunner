@@ -71,6 +71,15 @@ public sealed partial class RunHistoryViewModel : ObservableObject
     /// <summary>空历史空状态（无选中脚本或该脚本无记录）。</summary>
     [ObservableProperty]
     private bool _showEmptyState;
+    [ObservableProperty] private bool _hasLoadError;
+    public string LoadErrorText => _localization["List_LoadError"];
+    public string RetryText => _localization["Button_Retry"];
+    public string TimeHeaderText => _localization["History_Column_Time"];
+    public string StatusHeaderText => _localization["History_Column_Status"];
+    public string ExitHeaderText => _localization["History_Column_Exit"];
+    public string MetricsHeaderText => _localization["History_Column_Metrics"];
+    public string OutputHeaderText => _localization["History_Column_Output"];
+    public void Retry() => Load(_scriptId);
 
     // ---- 展示属性（资源键） ----
 
@@ -84,6 +93,7 @@ public sealed partial class RunHistoryViewModel : ObservableObject
     {
         _scriptId = scriptId;
         Records.Clear();
+        HasLoadError = false;
 
         if (scriptId == null)
         {
@@ -100,13 +110,14 @@ public sealed partial class RunHistoryViewModel : ObservableObject
         {
             // 数据层故障：降级为空历史，不打断主链路
             recent = Array.Empty<RunRecord>();
+            HasLoadError = true;
             DebugWriteError("History: 运行记录加载失败", ex);
         }
 
         foreach (var record in recent)
             Records.Add(BuildItem(record));
 
-        ShowEmptyState = Records.Count == 0;
+        ShowEmptyState = Records.Count == 0 && !HasLoadError;
     }
 
     private RunHistoryItemViewModel BuildItem(RunRecord record)
@@ -119,7 +130,7 @@ public sealed partial class RunHistoryViewModel : ObservableObject
             RecordId = record.Id,
             TimeText = ToLocalTimeText(record.StartedAt),
             Status = status,
-            StatusText = StatusText(status),
+            StatusText = record.MetricsStatus == "interrupted" ? _localization["Run_Interrupted"] : StatusText(status),
             ExitCodeText = record.ExitCode?.ToString(CultureInfo.InvariantCulture) ?? "-",
             MetricsText = FormatMetrics(record),
             Summary = BuildSummary(output),
@@ -181,6 +192,7 @@ public sealed partial class RunHistoryViewModel : ObservableObject
         OnPropertyChanged(nameof(EmptyText));
         OnPropertyChanged(nameof(DetailTitleText));
         OnPropertyChanged(nameof(CloseText));
+        foreach (var name in new[] { nameof(LoadErrorText), nameof(RetryText), nameof(TimeHeaderText), nameof(StatusHeaderText), nameof(ExitHeaderText), nameof(MetricsHeaderText), nameof(OutputHeaderText) }) OnPropertyChanged(name);
         Load(_scriptId); // 状态文字本地化重建
     }
 

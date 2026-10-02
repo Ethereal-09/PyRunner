@@ -11,12 +11,12 @@
     </script>
     <style>
         :root {
-            --terminal-background: #0c0e11;
+            --terminal-background: #0f1215;
             color-scheme: dark;
         }
 
         :root[data-theme="light"] {
-            --terminal-background: #f7f9fb;
+            --terminal-background: #f6f8fa;
             color-scheme: light;
         }
 
@@ -30,26 +30,34 @@
             overflow: hidden;
         }
 
-        #terminal {
+        #terminal-shell {
             width: 100%;
             height: 100%;
-            padding: 18px 22px;
+            padding: 12px 16px;
             box-sizing: border-box;
         }
 
-        /* xterm 的滚动仍由鼠标滚轮/键盘保留，隐藏 Chromium 默认的白色滚动条。 */
-        .xterm-viewport {
-            scrollbar-width: none;
+        #terminal {
+            width: 100%;
+            height: 100%;
         }
 
         .xterm-viewport::-webkit-scrollbar {
-            width: 0;
-            height: 0;
+            width: 8px;
+        }
+
+        .xterm-viewport::-webkit-scrollbar-thumb {
+            background: #59636d80;
+            border-radius: 4px;
+        }
+
+        .xterm-viewport::-webkit-scrollbar-track {
+            background: transparent;
         }
     </style>
 </head>
 <body>
-    <div id="terminal"></div>
+    <div id="terminal-shell"><div id="terminal"></div></div>
     <script src="xterm.js"></script>
     <script src="xterm-addon-fit.js"></script>
     <script src="terminal.js"></script>

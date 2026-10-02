@@ -28,12 +28,11 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <!-- 顶部：脚本库 / 资源管理器 + 刷新 / 设置。脚本由配置目录自动发现。 -->
+        <!-- 顶部：脚本库 / 资源管理器 + 刷新。脚本由配置目录自动发现。 -->
         <Border Grid.Row="0" BorderBrush="{ThemeResource BorderSubtleBrush}" BorderThickness="0,0,0,1">
             <Grid Padding="16,12">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
                 <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
@@ -56,23 +55,10 @@
                     Grid.Column="1"
                     Width="30" Height="30" MinWidth="30" MinHeight="30"
                     Padding="7"
-                    Margin="0,0,3,0"
                     Background="Transparent"
                     BorderBrush="Transparent"
                     Click="OnRefreshClick">
                     <ContentControl ContentTemplate="{StaticResource Icon_Refresh}" Width="16" Height="16" IsTabStop="False" />
-                </Button>
-                <Button
-                    x:Name="SidebarSettingsButton"
-                    AutomationProperties.AutomationId="SidebarSettingsButton"
-                    AutomationProperties.Name="{Binding SettingsText}"
-                    Grid.Column="2"
-                    Width="30" Height="30" MinWidth="30" MinHeight="30"
-                    Padding="7"
-                    Background="Transparent"
-                    BorderBrush="Transparent"
-                    Click="OnSidebarSettingsClick">
-                    <ContentControl ContentTemplate="{StaticResource Icon_Settings}" Width="16" Height="16" IsTabStop="False" />
                 </Button>
             </Grid>
         </Border>
@@ -195,6 +181,8 @@
                                     <MenuFlyoutItem Text="{Binding Content.MenuScheduleText}" Click="OnMenuScheduleTreeClick" />
                                     <MenuFlyoutItem Text="{Binding Content.MenuNotebookText}" Click="OnMenuNotebookTreeClick" />
                                     <MenuFlyoutItem Text="{Binding Content.MenuFavoriteText}" Click="OnMenuFavoriteTreeClick" />
+                                    <MenuFlyoutSeparator />
+                                    <MenuFlyoutItem Text="{Binding Content.MenuDeleteFileText}" Click="OnMenuDeleteFileTreeClick" />
                                 </MenuFlyout>
                             </Grid.ContextFlyout>
                         </Grid>

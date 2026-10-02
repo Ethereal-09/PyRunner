@@ -40,9 +40,6 @@ public interface INotificationService
     /// <summary>通用运行错误提示（文案键已本地化，如 Run_AlreadyRunning）。</summary>
     Task NotifyRunErrorAsync(XamlRoot xamlRoot, string errorKey);
 
-    /// <summary>脚本非零退出时的可选失败提醒。</summary>
-    Task NotifyRunFailedAsync(XamlRoot xamlRoot, string scriptName);
-
     /// <summary>通用友好错误提示（标题键 + 内容键）。</summary>
     Task NotifyErrorAsync(XamlRoot xamlRoot, string titleKey, string contentKey);
 }
@@ -109,10 +106,6 @@ public sealed class NotificationService : INotificationService
 
     public Task NotifyRunErrorAsync(XamlRoot xamlRoot, string errorKey) =>
         ShowInfoAsync(xamlRoot, _localization["Run_Error_Title"], _localization[errorKey]);
-
-    public Task NotifyRunFailedAsync(XamlRoot xamlRoot, string scriptName) =>
-        ShowInfoAsync(xamlRoot, _localization["Run_Error_Title"],
-            string.Format(_localization["Notify_RunFailed"], scriptName));
 
     public Task NotifyErrorAsync(XamlRoot xamlRoot, string titleKey, string contentKey) =>
         ShowInfoAsync(xamlRoot, _localization[titleKey], _localization[contentKey]);

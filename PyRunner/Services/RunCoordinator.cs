@@ -39,7 +39,6 @@ public sealed class RunCoordinator
         public required TerminalSessionViewModel ViewModel { get; init; }
         public required TailOutputBuffer Buffer { get; init; }
         public required int RecordId { get; init; }
-        public required string InterpreterPath { get; init; }
 
         /// <summary>用户已请求停止（或关闭了运行中标签）：退出时状态映射 Killed。</summary>
         public bool StopRequested { get; set; }
@@ -51,7 +50,6 @@ public sealed class RunCoordinator
     /// <summary>运行中会话索引（ScriptId → ActiveRun）；同脚本禁止并发的真相源。</summary>
     private readonly Dictionary<int, ActiveRun> _activeByScriptId = new();
     private bool _updateInstallBlocked;
-    private readonly HashSet<string> _dependencyInstallBlockedInterpreters = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>Restart 编排的一次性终结等待订阅（评审修 4）：Finalize 时完成。</summary>
     private sealed class ExitWaiter
@@ -79,35 +77,18 @@ public sealed class RunCoordinator
     /// <summary>脚本运行状态变化（供侧栏徽章状态机消费；UI 线程）。</summary>
     public event Action<int, RunStatus>? StatusChanged;
 
+    /// <summary>运行终结详情；退出码为空表示进程未能启动，不与已启动后的非零退出混淆。</summary>
+    public event Action<int, int?, RunStatus>? RunFinished;
+
     /// <summary>查询某脚本是否正在运行。</summary>
     public bool IsRunning(int scriptId) => _activeByScriptId.ContainsKey(scriptId);
 
     /// <summary>更新安装前只读检查；不得通过退出应用强制终止正在运行的脚本。</summary>
     public bool HasActiveRuns => _activeByScriptId.Count != 0;
+    public int ActiveRunCount => _activeByScriptId.Count;
 
-    public bool IsInterpreterRunning(string interpreterPath)
-    {
-        var normalized = Path.GetFullPath(interpreterPath);
-        return _activeByScriptId.Values.Any(run =>
-            string.Equals(run.InterpreterPath, normalized, StringComparison.OrdinalIgnoreCase));
-    }
 
-    public IDisposable? TryAcquireDependencyInstallLease(string interpreterPath)
-    {
-        var normalized = Path.GetFullPath(interpreterPath);
-        if (IsInterpreterRunning(normalized) || !_dependencyInstallBlockedInterpreters.Add(normalized)) return null;
-        return new DependencyInstallLease(this, normalized);
-    }
 
-    private sealed class DependencyInstallLease(RunCoordinator owner, string interpreterPath) : IDisposable
-    {
-        private RunCoordinator? _owner = owner;
-        public void Dispose()
-        {
-            var current = Interlocked.Exchange(ref _owner, null);
-            current?._dependencyInstallBlockedInterpreters.Remove(interpreterPath);
-        }
-    }
 
     public IUpdateInstallLease? TryAcquireUpdateInstallLease()
     {
@@ -150,19 +131,11 @@ public sealed class RunCoordinator
             return new TryStartResult(null, "Run_ArgumentsQuoteMismatch");
 
         // 3. 解释器解析：脚本指定 → 默认解释器 → 无则引导设置
-        Interpreter? interpreter = null;
-        if (script.InterpreterId is int specifiedId)
-        {
-            interpreter = _interpreters.GetAll().FirstOrDefault(i => i.Id == specifiedId);
-        }
-        interpreter ??= _interpreters.GetDefault();
+        var interpreter = ResolveInterpreter(script);
         if (interpreter == null)
             return new TryStartResult(null, "Run_NoInterpreter");
         if (!File.Exists(interpreter.ExecutablePath))
             return new TryStartResult(null, "Run_InterpreterMissing");
-        var normalizedInterpreterPath = Path.GetFullPath(interpreter.ExecutablePath);
-        if (_dependencyInstallBlockedInterpreters.Contains(normalizedInterpreterPath))
-            return new TryStartResult(null, "Run_DependencyInstallInProgress");
 
         // 4. venv 判定与环境变量（VIRTUAL_ENV/PATH 由本协调器算好，经 extraEnvironment 传入）
         var extraEnvironment = BuildVenvEnvironment(interpreter.ExecutablePath);
@@ -170,7 +143,9 @@ public sealed class RunCoordinator
         // 5. 命令行拼装（路径引号规则）+ 工作目录（未指定 = 脚本所在目录）
         var commandLine = PythonCommandLine.Build(
             interpreter.ExecutablePath, script.FilePath, script.Arguments);
-        var workingDirectory = !string.IsNullOrWhiteSpace(script.WorkingDirectory) && Directory.Exists(script.WorkingDirectory)
+        if (!string.IsNullOrWhiteSpace(script.WorkingDirectory) && !Directory.Exists(script.WorkingDirectory))
+            return new TryStartResult(null, "Run_WorkingDirectoryMissing");
+        var workingDirectory = !string.IsNullOrWhiteSpace(script.WorkingDirectory)
             ? script.WorkingDirectory
             : Path.GetDirectoryName(script.FilePath);
 
@@ -202,7 +177,6 @@ public sealed class RunCoordinator
                 ViewModel = viewModel,
                 Buffer = new TailOutputBuffer(),
                 RecordId = recordId,
-                InterpreterPath = normalizedInterpreterPath,
             };
 
             // 输出旁路：base64 → 原始字节 → 200KB 环形缓冲（线程安全，事件已在 UI 线程）
@@ -226,6 +200,14 @@ public sealed class RunCoordinator
         DebugLog.WriteLine($"Run: 启动 scriptId={script.Id} recordId={recordId} cmd={commandLine} cwd={workingDirectory} venv={(extraEnvironment != null)}");
 #endif
         return new TryStartResult(run.ViewModel, null);
+    }
+
+    private Interpreter? ResolveInterpreter(Script script)
+    {
+        Interpreter? interpreter = null;
+        if (script.InterpreterId is int specifiedId)
+            interpreter = _interpreters.GetAll().FirstOrDefault(item => item.Id == specifiedId);
+        return interpreter ?? _interpreters.GetDefault();
     }
 
     /// <summary>
@@ -417,6 +399,7 @@ public sealed class RunCoordinator
         }
 
         StatusChanged?.Invoke(scriptId, status);
+        RunFinished?.Invoke(scriptId, exitCode, status);
 
         // Restart 编排：完成该脚本的一次性终结等待订阅（评审修 4）
         if (_exitWaiters.TryGetValue(scriptId, out var waiters))

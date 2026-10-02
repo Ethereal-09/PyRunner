@@ -15,6 +15,7 @@ public sealed class ScheduledTask
     public string? NextRunAtUtc { get; set; }
     public string? LastRunAtUtc { get; set; }
     public string? LastResult { get; set; }
+    public string? LastErrorKey { get; set; }
     public bool Enabled { get; set; } = true;
     public string? CreatedAt { get; set; }
     public string? UpdatedAt { get; set; }

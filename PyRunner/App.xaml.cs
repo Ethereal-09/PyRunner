@@ -6,7 +6,6 @@ using PyRunner.Data;
 using PyRunner.Helpers;
 using PyRunner.Models;
 using PyRunner.Services;
-using PyRunner.Services.AI;
 using PyRunner.ViewModels;
 using PyRunner.Views;
 
@@ -106,18 +105,6 @@ public partial class App : Application
         services.AddSingleton<IScriptTemplateService, ScriptTemplateService>();
         services.AddSingleton<IExternalEditorLauncher, ExternalEditorLauncher>();
         services.AddSingleton<ICodeEditorInteraction, CodeEditorInteraction>();
-        services.AddSingleton<IAiCredentialStore, AiCredentialStore>();
-        services.AddSingleton<ISecretScanService, SecretScanService>();
-        services.AddSingleton<IAiContextBuilder, AiContextBuilder>();
-        services.AddSingleton<IAiChangeReviewService, AiChangeReviewService>();
-        services.AddSingleton<IAiInteractionService, AiInteractionService>();
-        services.AddSingleton<IAiConversationStore, AiConversationStore>();
-        services.AddSingleton<IAiFileContextService, AiFileContextService>();
-        services.AddSingleton<IAiPatchApplicationService, AiPatchApplicationService>();
-        services.AddSingleton<AiConfigurationService>();
-        services.AddSingleton<IAiProviderClient>(_ => new OpenAiResponsesClient(
-            new HttpClient(new HttpClientHandler { AllowAutoRedirect = false }) { Timeout = Timeout.InfiniteTimeSpan }));
-
         // Phase E：目录监听（单例，窗口关闭后随容器 Dispose 回收 watcher）与友好通知
         services.AddSingleton<IScriptDirectoryWatcher, ScriptDirectoryWatcher>();
         services.AddSingleton<INotificationService, NotificationService>();
@@ -125,18 +112,9 @@ public partial class App : Application
         // 运行编排（Phase D）：窗口生命周期内单实例，协调全部运行中标签
         services.AddSingleton<RunCoordinator>();
         services.AddSingleton<IUpdateInstallGuard, UpdateInstallGuard>();
-        services.AddSingleton<IRequirementsPolicy, RequirementsPolicy>();
-        services.AddSingleton<IPythonProcessRunner, PythonProcessRunner>();
-        services.AddSingleton<IDependencyInspectionService, DependencyInspectionService>();
-        services.AddSingleton<IDependencyInstallGuard, DependencyInstallGuard>();
-        services.AddSingleton<IDependencyInstallService, DependencyInstallService>();
-        services.AddSingleton<IDependencyInteractionService, DependencyInteractionService>();
-
         // ViewModel / 对话框（按次创建，避免状态串用）
         services.AddTransient<MainViewModel>();
-        services.AddTransient<ScriptDependencyViewModel>();
         services.AddTransient<CodeEditorViewModel>();
-        services.AddTransient<AiAssistantViewModel>();
         services.AddTransient<ScriptTemplateViewModel>();
         services.AddTransient<ScriptTemplateDialog>();
         services.AddTransient<ScriptListViewModel>();
@@ -167,12 +145,34 @@ public partial class App : Application
 
     protected override void OnLaunched(LaunchActivatedEventArgs args)
     {
+        // 独立数据目录使用独立实例锁；同一数据库仍只能被一个应用实例打开。
+        var isolatedDataDirectory = Environment.GetEnvironmentVariable("PYRUNNER_DATA_DIRECTORY");
+        var instanceName = "Local\\PyRunner.Application";
+        if (!string.IsNullOrWhiteSpace(isolatedDataDirectory))
+        {
+            var normalized = Path.GetFullPath(isolatedDataDirectory).TrimEnd(Path.DirectorySeparatorChar).ToUpperInvariant();
+            instanceName += "." + Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
+                System.Text.Encoding.UTF8.GetBytes(normalized)));
+        }
+        _instanceMutex = new Mutex(false, instanceName);
+        try { _ownsInstanceMutex = _instanceMutex.WaitOne(0); }
+        catch (AbandonedMutexException) { _ownsInstanceMutex = true; }
+        if (!_ownsInstanceMutex)
+        {
+            var localization = Services.GetRequiredService<ILocalizationService>();
+            _window = new Window { Title = "PyRunner", Content = new TextBlock
+                { Text = localization["App_AlreadyRunning"], Margin = new Thickness(24), TextWrapping = TextWrapping.Wrap } };
+            _window.Closed += (_, _) => Exit();
+            _window.Activate();
+            return;
+        }
         // 启动即迁移：幂等，二次启动不重复建表。
         // 失败时记录日志并弹错误对话框（文案走资源键）后退出，
         // 禁止异常裸抛导致「双击无反应」。
         try
         {
             Services.GetRequiredService<SchemaMigrator>().Migrate();
+            ((RunRecordService)Services.GetRequiredService<IRunRecordService>()).RecoverInterruptedRuns();
         }
         catch (Exception ex)
         {
@@ -182,6 +182,10 @@ public partial class App : Application
 
         LaunchInitialWindow();
     }
+
+    // 锁随进程退出由系统释放，禁止另一进程将当前活跃记录当作上次异常遗留。
+    private Mutex? _instanceMutex;
+    private bool _ownsInstanceMutex;
 
     private void LaunchInitialWindow()
     {
@@ -221,9 +225,7 @@ public partial class App : Application
                 Services.GetRequiredService<ISettingsService>(),
                 Services.GetRequiredService<ILocalizationService>(),
                 Services.GetRequiredService<MainViewModel>(),
-                Services.GetRequiredService<ScriptDependencyViewModel>(),
                 Services.GetRequiredService<CodeEditorViewModel>(),
-                Services.GetRequiredService<AiAssistantViewModel>(),
                 Services.GetRequiredService<ScriptListViewModel>(),
                 Services.GetRequiredService<FileTreeViewModel>(),
                 Services.GetRequiredService<RunCoordinator>(),
@@ -296,6 +298,7 @@ public partial class App : Application
             // Windows App SDK 1.5 在同一进程内从独立引导 Window 切换到
             // MainWindow 时会在 Microsoft.ui.xaml.dll 中触发原生访问冲突。
             // 完成标记已落盘，因此由新进程通过正常启动门控直接创建主窗口。
+            if (_ownsInstanceMutex) { _instanceMutex!.ReleaseMutex(); _ownsInstanceMutex = false; }
             using var restartedProcess = Process.Start(new ProcessStartInfo
             {
                 FileName = executablePath,
@@ -309,6 +312,11 @@ public partial class App : Application
         {
             _ = ex;
             RollBackOnboardingCompletion();
+            if (!_ownsInstanceMutex)
+            {
+                try { _ownsInstanceMutex = _instanceMutex!.WaitOne(0); }
+                catch (AbandonedMutexException) { _ownsInstanceMutex = true; }
+            }
             _transitioningFromOnboarding = false;
             onboarding.ShowCompletionError(
                 Services.GetRequiredService<ILocalizationService>()["Wizard_SaveFailed"]);

@@ -62,6 +62,15 @@ internal static class JsonSettingsServiceTests
                        persisted.LastUpdateCheckAttemptUtc is not null &&
                        persisted.LastSuccessfulUpdateCheck?.Version == "1.2.3",
                     "update cache and settings-page values survive concurrent saves");
+
+                settings.Update(value =>
+                {
+                    value.SidebarCollapsed = true;
+                });
+                settings.FlushOrThrow();
+                var sidebarPersisted = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(settings.SettingsPath));
+                Verify(settings.Current.SidebarCollapsed && sidebarPersisted?.SidebarCollapsed == true,
+                    "manual sidebar collapse survives settings snapshots and disk persistence");
             }
 
             var backupDirectory = Path.Combine(root, "backup");

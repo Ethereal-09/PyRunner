@@ -36,26 +36,6 @@ window.PyRunnerCodeMirror = {
     const view = new EditorView({ state, parent });
     return {
       getText: () => view.state.doc.toString(),
-      getAiContext() {
-        const range = view.state.selection.main;
-        const isSelection = range.from !== range.to;
-        return {
-          text: isSelection ? view.state.sliceDoc(range.from, range.to) : view.state.doc.toString(),
-          selectionStart: isSelection ? range.from : 0,
-          selectionEnd: isSelection ? range.to : view.state.doc.length,
-          isSelection,
-        };
-      },
-      replaceChecked(from, to, expected, candidate) {
-        if (from < 0 || to < from || to > view.state.doc.length ||
-            view.state.sliceDoc(from, to) !== expected) return false;
-        view.dispatch({
-          changes: { from, to, insert: candidate },
-          selection: { anchor: from + candidate.length },
-        });
-        view.focus();
-        return true;
-      },
       setText(text) {
         view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: text || "" } });
       },

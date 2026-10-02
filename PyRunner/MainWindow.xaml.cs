@@ -77,11 +77,19 @@ public sealed partial class MainWindow : Window
     private bool _allowClose;
     private bool _closePromptOpen;
     private int? _editorScriptId;
+    private string? _runNoticeScriptName;
+    private int? _runNoticeExitCode;
 
     // ---- 侧栏拖拽调宽状态（仅 UI 线程） ----
     private bool _thumbDragging;
     private double _dragStartX;
     private double _dragStartWidth;
+    private bool _sidebarAutoCollapsed;
+    private bool _sidebarNarrowExpanded;
+
+    public string SidebarToggleText => _localization["Shell_ToggleSidebar"];
+    public string AuxiliaryMenuText => _localization["Shell_MoreActions"];
+    public string WorkspacesMenuText => _localization["Shell_Workspaces"];
 
     /// <summary>标签 ↔ 会话 VM 映射（仅 UI 线程）；关闭标签即 Dispose 会话。</summary>
     private readonly Dictionary<TabViewItem, TerminalSessionViewModel> _tabSessions = new();
@@ -106,7 +114,6 @@ public sealed partial class MainWindow : Window
     private readonly CancellationTokenSource _startupUpdateCancellation = new();
     private Task _startupUpdateTask = Task.CompletedTask;
     private readonly HelpAboutPage _helpPage;
-    private readonly AiAssistantPage _aiPage;
     private readonly ScheduledTasksPage _scheduledTasksPage;
     private readonly IScheduledTaskService _scheduledTaskService;
     private readonly ScheduleCoordinator _scheduleCoordinator;
@@ -115,9 +122,7 @@ public sealed partial class MainWindow : Window
     private readonly Dictionary<int, int> _scheduledRunByScriptId = new();
 
     public MainViewModel ViewModel { get; }
-    public ScriptDependencyViewModel DependencyViewModel { get; }
     public CodeEditorViewModel CodeEditorViewModel { get; }
-    public AiAssistantViewModel AiAssistantViewModel { get; }
 
     /// <summary>标题栏应用名（x:Bind；语言切换经 Bindings.Update 刷新）。</summary>
     public string AppName => _localization["App_Name"];
@@ -131,7 +136,6 @@ public sealed partial class MainWindow : Window
     public string NavSchedulesText => _localization["Nav_Schedules"];
     public string NavSettingsText => _localization["Nav_Settings"];
     public string NavHelpText => _localization["Nav_Help"];
-    public string NavAiText => _localization["Nav_AI"];
     public string EditText => _localization["Button_Edit"];
     public string NoScriptSelectedText => _localization["Script_NoneSelected"];
     public string SelectScriptHintText => _localization["Script_SelectHint"];
@@ -153,9 +157,7 @@ public sealed partial class MainWindow : Window
         ISettingsService settingsService,
         ILocalizationService localization,
         MainViewModel viewModel,
-        ScriptDependencyViewModel dependencyViewModel,
         CodeEditorViewModel codeEditorViewModel,
-        AiAssistantViewModel aiAssistantViewModel,
         ScriptListViewModel scriptListViewModel,
         FileTreeViewModel fileTreeViewModel,
         RunCoordinator coordinator,
@@ -192,19 +194,14 @@ public sealed partial class MainWindow : Window
         _scheduledTaskDialogFactory = scheduledTaskDialogFactory;
         _scriptTemplateDialogFactory = scriptTemplateDialogFactory;
         ViewModel = viewModel;
-        DependencyViewModel = dependencyViewModel;
         CodeEditorViewModel = codeEditorViewModel;
-        AiAssistantViewModel = aiAssistantViewModel;
-        AiAssistantViewModel.AttachEditor(CodeEditorViewModel);
 
         // Mica 系统背景（Phase C 交付 7）：Win11 呈现云母材质，Win10 自动回退纯色
         SystemBackdrop = new MicaBackdrop();
 
         InitializeComponent();
-        DependencyExpander.DataContext = DependencyViewModel;
+        RunButton.RegisterPropertyChangedCallback(Control.IsEnabledProperty, (_, _) => RefreshRunButtonVisual());
 
-        _aiPage = new AiAssistantPage(AiAssistantViewModel, CodeEditorViewModel);
-        AiAssistantPageHost.Content = _aiPage;
 
         _helpPage = helpAboutPageFactory();
         _helpPage.SettingsRequested += OnHelpSettingsRequested;
@@ -215,6 +212,7 @@ public sealed partial class MainWindow : Window
         _scheduledTasksPage.EditRequested += OnScheduleEditRequested;
         _scheduledTasksPage.RunNowRequested += OnScheduleRunNowRequested;
         _scheduledTasksPage.DeleteRequested += OnScheduleDeleteRequested;
+        _scheduledTasksPage.HistoryRequested += OnScheduleHistoryRequested;
         _scheduledTasksPage.Changed += OnSchedulesChanged;
         _scheduleCoordinator.TaskDue += OnScheduledTaskDue;
         _navigation.Navigated += OnShellNavigated;
@@ -248,6 +246,7 @@ public sealed partial class MainWindow : Window
         // 侧栏宽度单一真相源：AppSettings.SidebarWidth（XAML 不再硬编码），
         // 钳制 180~500；拖拽结束写回同一键（见 OnThumbPointerReleased）
         SidebarColumn.Width = new GridLength(Math.Clamp(_settingsService.Current.SidebarWidth, SidebarWidthMin, SidebarWidthMax));
+        UpdateResponsiveShell(RootLayout.ActualWidth);
 
         // 自绘标题栏：内容延伸到标题区域，仅中间空白 TitleBarDragRegion 提供系统拖动；
         // 导航和主题按钮留在拖动区之外，确保真实指针输入不会被非客户区吞掉。
@@ -270,6 +269,7 @@ public sealed partial class MainWindow : Window
         Sidebar.Initialize(_scriptListViewModel, _fileTreeViewModel);
         Sidebar.EditRequested += OnSidebarEdit;
         Sidebar.DeleteRequested += OnSidebarDelete;
+        Sidebar.DeleteFileRequested += OnSidebarDeleteFile;
         Sidebar.RunRequested += OnSidebarRun;
         Sidebar.ScheduleRequested += OnSidebarSchedule;
         // Phase E 新增入口：记事本 / 收藏切换 / 手动刷新 / 空状态引导去设置
@@ -288,6 +288,7 @@ public sealed partial class MainWindow : Window
 
         // 运行编排状态广播：侧栏徽章 + 运行/停止按钮状态机
         _coordinator.StatusChanged += OnRunStatusChanged;
+        _coordinator.RunFinished += OnRunFinished;
 
         // 列表选中变化 → 壳 VM 运行状态机（具名订阅，OnClosed 退订）
         _scriptListViewModel.PropertyChanged += OnListSelectionChanged;
@@ -420,6 +421,7 @@ public sealed partial class MainWindow : Window
         RefreshLocalizedToolTips();
         RefreshSelectedScriptPresentation();
         RefreshTerminalTabHeaders();
+        RefreshRunResultNotice();
     }
 
     private void RefreshLocalizedToolTips()
@@ -459,9 +461,7 @@ public sealed partial class MainWindow : Window
             _scriptListViewModel.Load(selectedPath);
             _fileTreeViewModel.Load();
             RefreshSelectedScriptPresentation();
-            if (AiAssistantPageHost.Visibility == Visibility.Visible)
-                ShowAiPage();
-            else if (HelpPageHost.Visibility == Visibility.Visible)
+            if (HelpPageHost.Visibility == Visibility.Visible)
                 ShowHelpPage();
             else if (ScheduledTasksHost.Visibility == Visibility.Visible)
                 ShowScheduledTasksPage();
@@ -492,7 +492,7 @@ public sealed partial class MainWindow : Window
 
     private void OnNavHelpClick(object sender, RoutedEventArgs e) => _navigation.Navigate(ShellPage.Help);
 
-    private void OnNavAiClick(object sender, RoutedEventArgs e) => _navigation.Navigate(ShellPage.AiAssistant);
+
 
     private void OnShellNavigated(object? sender, ShellPage page)
     {
@@ -506,9 +506,6 @@ public sealed partial class MainWindow : Window
                 break;
             case ShellPage.Help:
                 ShowHelpPage();
-                break;
-            case ShellPage.AiAssistant:
-                ShowAiPage();
                 break;
             default:
                 ShowScriptsPage();
@@ -549,8 +546,7 @@ public sealed partial class MainWindow : Window
         (button == NavScriptsButton && WorkArea.Visibility == Visibility.Visible && ScriptsPage.Visibility == Visibility.Visible) ||
         (button == NavRunsButton && WorkArea.Visibility == Visibility.Visible && RunsPage.Visibility == Visibility.Visible) ||
         (button == NavSchedulesButton && ScheduledTasksHost.Visibility == Visibility.Visible) ||
-        (button == NavHelpButton && HelpPageHost.Visibility == Visibility.Visible) ||
-        (button == NavAiButton && AiAssistantPageHost.Visibility == Visibility.Visible);
+        (button == NavHelpButton && HelpPageHost.Visibility == Visibility.Visible) ;
 
     private void RefreshButtonRestingVisuals()
     {
@@ -588,21 +584,8 @@ public sealed partial class MainWindow : Window
             HelpPageHost.Visibility == Visibility.Visible
                 ? Views.ThemeBrushes.Get("TextPrimaryBrush", 0xFFF0F2F4)
                 : Views.ThemeBrushes.Get("TextSecondaryBrush", 0xFFAAB2BC));
-        ApplyButtonVisual(
-            NavAiButton,
-            AiAssistantPageHost.Visibility == Visibility.Visible
-                ? Views.ThemeBrushes.Get("NavigationSelectedBrush", 0xFF30363A)
-                : transparent,
-            AiAssistantPageHost.Visibility == Visibility.Visible
-                ? Views.ThemeBrushes.Get("TextPrimaryBrush", 0xFFF0F2F4)
-                : Views.ThemeBrushes.Get("TextSecondaryBrush", 0xFFAAB2BC));
         ApplyButtonVisual(ThemeButton, transparent, Views.ThemeBrushes.Get("TextPrimaryBrush", 0xFFF0F2F4));
-        ApplyButtonVisual(
-            RunButton,
-            Views.ThemeBrushes.Get("AccentBrush", 0xFF35A875),
-            RunButton.IsEnabled
-                ? Views.ThemeBrushes.Get("PrimaryButtonForegroundBrush", 0xFFFFFFFF)
-                : Views.ThemeBrushes.Get("DisabledButtonForegroundBrush", 0xFF7E8995));
+        RefreshRunButtonVisual();
         ApplyButtonVisual(
             StopButton,
             StopButton.IsEnabled
@@ -634,17 +617,30 @@ public sealed partial class MainWindow : Window
     private void OnThemeButtonPointerExited(object sender, PointerRoutedEventArgs e) =>
         ApplyButtonChrome(ThemeButton, new SolidColorBrush(Windows.UI.Color.FromArgb(0, 0, 0, 0)));
 
-    private void OnRunButtonPointerEntered(object sender, PointerRoutedEventArgs e) =>
-        ApplyButtonChrome(RunButton, Views.ThemeBrushes.Get("AccentHoverBrush", 0xFF3DB982));
+    private void RefreshRunButtonVisual()
+    {
+        ApplyButtonVisual(RunButton,
+            Views.ThemeBrushes.Get(RunButton.IsEnabled ? "AccentBrush" : "DisabledButtonBrush", 0xFF24282C),
+            Views.ThemeBrushes.Get(RunButton.IsEnabled ? "PrimaryButtonForegroundBrush" : "DisabledButtonForegroundBrush", 0xFF7E8995));
+        RunButton.BorderBrush = Views.ThemeBrushes.Get(RunButton.IsEnabled ? "SelectedBorderBrush" : "SecondaryButtonBorderBrush", 0xFF353C42);
+    }
 
-    private void OnRunButtonPointerPressed(object sender, PointerRoutedEventArgs e) =>
-        ApplyButtonChrome(RunButton, Views.ThemeBrushes.Get("AccentPressedBrush", 0xFF2B8E63));
+    private void OnRunButtonPointerEntered(object sender, PointerRoutedEventArgs e)
+    {
+        if (RunButton.IsEnabled) ApplyButtonChrome(RunButton, Views.ThemeBrushes.Get("AccentHoverBrush", 0xFF3DB982));
+    }
 
-    private void OnRunButtonPointerReleased(object sender, PointerRoutedEventArgs e) =>
-        ApplyButtonChrome(RunButton, Views.ThemeBrushes.Get("AccentHoverBrush", 0xFF3DB982));
+    private void OnRunButtonPointerPressed(object sender, PointerRoutedEventArgs e)
+    {
+        if (RunButton.IsEnabled) ApplyButtonChrome(RunButton, Views.ThemeBrushes.Get("AccentPressedBrush", 0xFF2B8E63));
+    }
 
-    private void OnRunButtonPointerExited(object sender, PointerRoutedEventArgs e) =>
-        ApplyButtonChrome(RunButton, Views.ThemeBrushes.Get("AccentBrush", 0xFF35A875));
+    private void OnRunButtonPointerReleased(object sender, PointerRoutedEventArgs e)
+    {
+        if (RunButton.IsEnabled) ApplyButtonChrome(RunButton, Views.ThemeBrushes.Get("AccentHoverBrush", 0xFF3DB982));
+    }
+
+    private void OnRunButtonPointerExited(object sender, PointerRoutedEventArgs e) => RefreshRunButtonVisual();
 
     private void OnStopButtonPointerEntered(object sender, PointerRoutedEventArgs e)
     {
@@ -735,7 +731,6 @@ public sealed partial class MainWindow : Window
         WorkArea.Visibility = Visibility.Visible;
         HelpPageHost.Visibility = Visibility.Collapsed;
         ScheduledTasksHost.Visibility = Visibility.Collapsed;
-        AiAssistantPageHost.Visibility = Visibility.Collapsed;
         ScriptsPage.Visibility = Visibility.Visible;
         RunsPage.Visibility = Visibility.Collapsed;
         RefreshButtonRestingVisuals();
@@ -747,7 +742,6 @@ public sealed partial class MainWindow : Window
         WorkArea.Visibility = Visibility.Visible;
         HelpPageHost.Visibility = Visibility.Collapsed;
         ScheduledTasksHost.Visibility = Visibility.Collapsed;
-        AiAssistantPageHost.Visibility = Visibility.Collapsed;
         ScriptsPage.Visibility = Visibility.Collapsed;
         RunsPage.Visibility = Visibility.Visible;
         RefreshButtonRestingVisuals();
@@ -758,7 +752,6 @@ public sealed partial class MainWindow : Window
     {
         WorkArea.Visibility = Visibility.Collapsed;
         ScheduledTasksHost.Visibility = Visibility.Collapsed;
-        AiAssistantPageHost.Visibility = Visibility.Collapsed;
         HelpPageHost.Visibility = Visibility.Visible;
         _helpPage.Refresh();
         RefreshButtonRestingVisuals();
@@ -768,22 +761,12 @@ public sealed partial class MainWindow : Window
     {
         WorkArea.Visibility = Visibility.Collapsed;
         HelpPageHost.Visibility = Visibility.Collapsed;
-        AiAssistantPageHost.Visibility = Visibility.Collapsed;
         ScheduledTasksHost.Visibility = Visibility.Visible;
         _scheduledTasksPage.Refresh();
         RefreshButtonRestingVisuals();
     }
 
-    private void ShowAiPage()
-    {
-        WorkArea.Visibility = Visibility.Collapsed;
-        HelpPageHost.Visibility = Visibility.Collapsed;
-        ScheduledTasksHost.Visibility = Visibility.Collapsed;
-        AiAssistantPageHost.Visibility = Visibility.Visible;
-        AiAssistantViewModel.IsOpen = true;
-        RefreshButtonRestingVisuals();
-        _ = EnsureCodeEditorContextAsync();
-    }
+
 
     /// <summary>把侧栏选择投影到设计稿脚本信息栏、终端命令预览和状态栏。</summary>
     private void RefreshSelectedScriptPresentation()
@@ -794,11 +777,11 @@ public sealed partial class MainWindow : Window
         var item = _scriptListViewModel.SelectedItem;
         var hasScript = script != null;
         EditButton.IsEnabled = hasScript;
+        OverflowEditItem.IsEnabled = hasScript;
         RefreshButtonRestingVisuals();
 
         if (script == null)
         {
-            DependencyViewModel.SetContext(null, null);
             SelectedScriptNameText.Text = NoScriptSelectedText;
             SelectedScriptMetadataText.Text = SelectScriptHintText;
             ToolTipService.SetToolTip(SelectedScriptMetadataText, null);
@@ -815,7 +798,6 @@ public sealed partial class MainWindow : Window
         }
 
         var interpreter = ResolveInterpreter(script);
-        DependencyViewModel.SetContext(script, interpreter);
         var interpreterText = InterpreterDisplayName(interpreter);
         var category = string.IsNullOrWhiteSpace(script.Category)
             ? _localization["Category_Uncategorized"]
@@ -910,7 +892,7 @@ public sealed partial class MainWindow : Window
             RunStatus.Killed => _localization["StatusBadge_Killed"],
             _ => _localization["StatusBadge_Running"],
         };
-        LastRunResultText.Text = statusText;
+        LastRunResultText.Text = string.Format(_localization["Status_LastResultFormat"], statusText);
         LastRunTimeText.Text = _lastRunTime.Value.ToString("HH:mm:ss");
         LastRunTimeText.Visibility = Visibility.Visible;
         LastRunTimeSeparatorText.Visibility = Visibility.Visible;
@@ -957,6 +939,7 @@ public sealed partial class MainWindow : Window
 
     private void OnClosed(object? sender, WindowEventArgs args)
     {
+        Sidebar.DeleteFileRequested -= OnSidebarDeleteFile;
         _isClosing = true;
         _startupUpdateCancellation.Cancel();
         var startupTask = _startupUpdateTask;
@@ -994,6 +977,7 @@ public sealed partial class MainWindow : Window
         _scheduledTasksPage.EditRequested -= OnScheduleEditRequested;
         _scheduledTasksPage.RunNowRequested -= OnScheduleRunNowRequested;
         _scheduledTasksPage.DeleteRequested -= OnScheduleDeleteRequested;
+        _scheduledTasksPage.HistoryRequested -= OnScheduleHistoryRequested;
         _scheduledTasksPage.Changed -= OnSchedulesChanged;
         _scheduledTasksPage.Dispose();
         _scheduleCoordinator.TaskDue -= OnScheduledTaskDue;
@@ -1002,10 +986,8 @@ public sealed partial class MainWindow : Window
         _watcher.Changed -= OnWatcherChanged;
         _scriptListViewModel.PropertyChanged -= OnListSelectionChanged;
         _coordinator.StatusChanged -= OnRunStatusChanged;
-        DependencyViewModel.Dispose();
-        _aiPage.Dispose();
+        _coordinator.RunFinished -= OnRunFinished;
         CodeEditorViewModel.Dispose();
-        AiAssistantViewModel.Dispose();
 
         // 先释放全部终端会话（Dispose 触发 Job Object 孤儿防护），再退订壳 VM；
         // 顺序约束：ShutdownAll 内 FinishRun 依赖尚未 Dispose 的单例服务（App 的
@@ -1135,6 +1117,10 @@ public sealed partial class MainWindow : Window
         await _notifications.NotifyRunErrorAsync(Content.XamlRoot, result.ErrorKey!);
     }
 
+
+
+
+
     /// <summary>移除脚本登记（通知引导路径：不再二次确认，用户已在对话框内选择）。</summary>
     private async Task DeleteScriptRecordSilentAsync(int scriptId)
     {
@@ -1254,10 +1240,34 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    private void OnTabCloseRequested(TabView sender, TabViewTabCloseRequestedEventArgs args)
+    private async void OnTabCloseRequested(TabView sender, TabViewTabCloseRequestedEventArgs args)
     {
         if (args.Tab is { } tab)
+        {
+            if (_tabSessions.TryGetValue(tab, out var session) && _coordinator.IsRunning(session.ScriptId)
+                && !await ConfirmStopAndCloseAsync(1)) return;
             CloseTab(tab);
+        }
+    }
+
+    private async Task<bool> ConfirmStopAndCloseAsync(int count)
+    {
+        if (_dialogInFlight) return false;
+        _dialogInFlight = true;
+        try
+        {
+            var dialog = new ContentDialog
+            {
+                Title = _localization["Run_Close_Title"],
+                Content = string.Format(_localization["Run_Close_Content"], count),
+                PrimaryButtonText = _localization["Run_Close_Confirm"],
+                CloseButtonText = _localization["Button_Cancel"],
+                DefaultButton = ContentDialogButton.Close,
+            };
+            PrepareDialog(dialog);
+            return await dialog.ShowAsync() == ContentDialogResult.Primary;
+        }
+        finally { _dialogInFlight = false; }
     }
 
     /// <summary>关闭标签：运行中会话按停止处理（状态 Killed），随后 Dispose 会话并移除标签。</summary>
@@ -1351,8 +1361,8 @@ public sealed partial class MainWindow : Window
     /// 后台标签的终结事件不得覆盖状态栏；徽章与 SelectedScriptRunning 不受此门控。</summary>
     private void OnRunStatusChanged(int scriptId, RunStatus status)
     {
+        if (status == RunStatus.Running) RunResultNotice.IsOpen = false;
         _scriptListViewModel.SetRunStatus(scriptId, status);
-        DependencyViewModel.RefreshRunState();
 
         if (status is RunStatus.Success or RunStatus.Failed or RunStatus.Killed &&
             _scheduledRunByScriptId.Remove(scriptId, out var scheduledTaskId))
@@ -1390,9 +1400,6 @@ public sealed partial class MainWindow : Window
             _ => "AccentBrush",
         }, 0xFF35A875);
 
-        if (status == RunStatus.Failed && _settingsService.Current.NotifyOnFail)
-            _ = NotifyFailedRunAsync(scriptId);
-
         // 门控：仅活跃标签的会话终结/启动才驱动状态栏
         var activeVm = Tabs.SelectedItem is TabViewItem activeTab && _tabSessions.TryGetValue(activeTab, out var vm)
             ? vm
@@ -1413,13 +1420,14 @@ public sealed partial class MainWindow : Window
     private async void OnAppWindowClosing(Microsoft.UI.Windowing.AppWindow sender,
         Microsoft.UI.Windowing.AppWindowClosingEventArgs args)
     {
-        if (_allowClose || !CodeEditorViewModel.IsDirty) return;
+        if (_allowClose || (!CodeEditorViewModel.IsDirty && !_coordinator.HasActiveRuns)) return;
         args.Cancel = true;
         if (_closePromptOpen) return;
         _closePromptOpen = true;
         try
         {
-            if (await CodeEditorViewModel.PrepareToSwitchAsync())
+            if (await CodeEditorViewModel.PrepareToSwitchAsync()
+                && (!_coordinator.HasActiveRuns || await ConfirmStopAndCloseAsync(_coordinator.ActiveRunCount)))
             {
                 _allowClose = true;
                 Close();
@@ -1428,141 +1436,33 @@ public sealed partial class MainWindow : Window
         finally { _closePromptOpen = false; }
     }
 
-    private async void OnSidebarSchedule(object? sender, ScriptListItemViewModel item)
+    /// <summary>退出提醒不阻塞终端，也不排队显示过期的失败弹窗。</summary>
+    private void OnRunFinished(int scriptId, int? exitCode, RunStatus status)
     {
-        if (_dialogInFlight) return;
-        _dialogInFlight = true;
+        if (_isClosing || status != RunStatus.Failed || !_settingsService.Current.NotifyOnFail) return;
         try
         {
-            await DialogHostHelper.ShowAfterFlyoutDismissAsync(sender as DependencyObject);
-            await ShowScheduledTaskDialogAsync(item.Script, null);
-        }
-        catch (Exception ex) { DebugWriteUnexpected("SidebarSchedule", ex); }
-        finally { _dialogInFlight = false; }
-    }
-
-    private async void OnScheduleAddRequested(Script? script) => await OpenScheduledTaskDialogGuardedAsync(script, null);
-    private async void OnScheduleEditRequested(ScheduledTask task) => await OpenScheduledTaskDialogGuardedAsync(null, task);
-
-    private async Task OpenScheduledTaskDialogGuardedAsync(Script? script, ScheduledTask? task)
-    {
-        if (_dialogInFlight) return;
-        _dialogInFlight = true;
-        try { await ShowScheduledTaskDialogAsync(script, task); }
-        catch (Exception ex) { DebugWriteUnexpected("ScheduledTaskDialog", ex); }
-        finally { _dialogInFlight = false; }
-    }
-
-    private async Task ShowScheduledTaskDialogAsync(Script? script, ScheduledTask? task)
-    {
-        var dialog = _scheduledTaskDialogFactory();
-        PrepareDialog(dialog);
-        dialog.Prepare(script, task);
-        var result = await dialog.ShowAsync();
-        if (result != ContentDialogResult.Primary) return;
-        _scheduledTasksPage.Refresh();
-        _scheduleCoordinator.Rearm();
-        _navigation.Navigate(ShellPage.ScheduledTasks);
-    }
-
-    private async void OnScheduleDeleteRequested(ScheduledTask task)
-    {
-        if (_dialogInFlight) return;
-        _dialogInFlight = true;
-        try
-        {
-            var dialog = new ContentDialog
-            {
-                Title = _localization["Schedule_Delete_Title"],
-                Content = string.Format(_localization["Schedule_Delete_Content"], task.Name),
-                PrimaryButtonText = _localization["Menu_Delete"],
-                CloseButtonText = _localization["Button_Cancel"],
-                DefaultButton = ContentDialogButton.Close,
-            };
-            PrepareDialog(dialog);
-            if (await dialog.ShowAsync() == ContentDialogResult.Primary)
-            {
-                _scheduledTaskService.Delete(task.Id);
-                _scheduledTasksPage.Refresh();
-                _scheduleCoordinator.Rearm();
-            }
-        }
-        catch (Exception ex) { DebugWriteUnexpected("ScheduledTaskDelete", ex); }
-        finally { _dialogInFlight = false; }
-    }
-
-    private void OnSchedulesChanged() => _scheduleCoordinator.Rearm();
-    private void OnScheduledTaskDue(ScheduledTask task) => StartScheduledTask(task, updateLastResult: false);
-    private void OnScheduleRunNowRequested(ScheduledTask task) => StartScheduledTask(task, updateLastResult: true);
-
-    private void StartScheduledTask(ScheduledTask task, bool updateLastResult)
-    {
-        try
-        {
-            var script = task.ScriptId is int scriptId ? _scriptService.GetById(scriptId) : null;
-            if (script == null || !File.Exists(script.FilePath))
-            {
-                _scheduledTaskService.SetLastResult(task.Id, "missing");
-                _scheduledTaskService.SetEnabled(task.Id, false);
-                _scheduledTasksPage.Refresh();
-                _scheduleCoordinator.Rearm();
-                return;
-            }
-            if (_coordinator.IsRunning(script.Id))
-            {
-                _scheduledTaskService.SetLastResult(task.Id, "skipped");
-                _scheduledTasksPage.Refresh();
-                return;
-            }
-            var result = _coordinator.TryStart(script);
-            if (!result.IsSuccess)
-            {
-                _scheduledTaskService.SetLastResult(
-                    task.Id,
-                    result.ErrorKey == "Run_ScriptNotFound" ? "missing" : "failed");
-                _scheduledTasksPage.Refresh();
-                return;
-            }
-            if (updateLastResult)
-                _scheduledTaskService.SetLastResult(task.Id, "running");
-            _scheduledRunByScriptId[script.Id] = task.Id;
-            CreateTab(result.ViewModel!, activate: false);
-            _scheduledTasksPage.Refresh();
-        }
-        catch (Exception ex)
-        {
-            DebugWriteUnexpected("ScheduledTaskRun", ex);
-            try { _scheduledTaskService.SetLastResult(task.Id, "failed"); _scheduledTasksPage.Refresh(); }
-            catch (Exception nested) { DebugWriteUnexpected("ScheduledTaskRunResult", nested); }
-        }
-    }
-
-    /// <summary>
-    /// 失败提醒与其他 ContentDialog 串行显示；等待现有对话框关闭，不在其上叠第二个弹窗。
-    /// 多脚本同时失败时，各 continuation 在 UI 线程依次取得 _dialogInFlight。
-    /// </summary>
-    private async Task NotifyFailedRunAsync(int scriptId)
-    {
-        while (_dialogInFlight && !_isClosing)
-            await Task.Delay(100);
-
-        if (_isClosing || !_settingsService.Current.NotifyOnFail) return;
-        var script = _scriptService.GetById(scriptId);
-        if (script == null) return;
-
-        _dialogInFlight = true;
-        try
-        {
-            await _notifications.NotifyRunFailedAsync(Content.XamlRoot, script.Name);
+            var script = _scriptService.GetById(scriptId);
+            if (script is null) return;
+            _runNoticeScriptName = script.Name;
+            _runNoticeExitCode = exitCode;
+            RefreshRunResultNotice();
+            RunResultNotice.IsOpen = true;
         }
         catch (Exception ex)
         {
             DebugWriteUnexpected("RunFailedNotification", ex);
         }
-        finally
-        {
-            _dialogInFlight = false;
-        }
+    }
+
+    private void RefreshRunResultNotice()
+    {
+        if (_runNoticeScriptName is null) return;
+        RunResultNotice.Severity = _runNoticeExitCode.HasValue ? InfoBarSeverity.Warning : InfoBarSeverity.Error;
+        RunResultNotice.Title = _localization[_runNoticeExitCode.HasValue ? "Notify_RunExited_Title" : "Run_Error_Title"];
+        RunResultNotice.Message = _runNoticeExitCode is int exitCode
+            ? string.Format(_localization["Notify_RunExited"], _runNoticeScriptName, exitCode)
+            : string.Format(_localization["Notify_RunStartFailed"], _runNoticeScriptName);
     }
 
     /// <summary>列表选中变化 → 壳 VM 运行状态机（选中脚本 + 是否运行中）+ 历史面板刷新（Phase E）。</summary>
@@ -1613,8 +1513,8 @@ public sealed partial class MainWindow : Window
         await EnsureCodeEditorContextAsync();
     }
 
-    /// <summary>AI 页面和代码模式共用同一编辑缓冲区。进入任一入口时懒加载 WebView2，
-    /// 并把左侧文件树当前选中的脚本载入，确保 AI 上下文与可审查应用目标一致。</summary>
+    /// <summary>代码模式懒加载 WebView2 编辑器，
+    /// 并载入左侧文件树当前选中的脚本。</summary>
     private async Task EnsureCodeEditorContextAsync()
     {
         if (_isClosing) return;
@@ -1690,6 +1590,64 @@ public sealed partial class MainWindow : Window
         {
             _dialogInFlight = false;
         }
+    }
+
+    private async void OnSidebarDeleteFile(object? sender, string filePath)
+    {
+        if (_dialogInFlight || _isClosing) return;
+        _dialogInFlight = true;
+        try
+        {
+            await DialogHostHelper.ShowAfterFlyoutDismissAsync(sender as DependencyObject);
+            var script = _scriptService.GetAll().FirstOrDefault(item =>
+                string.Equals(item.FilePath, filePath, StringComparison.OrdinalIgnoreCase));
+            if (script is not null && _coordinator.IsRunning(script.Id))
+            {
+                await _notifications.NotifyErrorAsync(Content.XamlRoot, "DeleteFile_Title", "DeleteFile_Running");
+                return;
+            }
+            var confirm = new ContentDialog
+            {
+                Title = _localization["DeleteFile_Title"],
+                Content = string.Format(_localization["DeleteFile_Content"], filePath),
+                PrimaryButtonText = _localization["Button_Delete"],
+                CloseButtonText = _localization["Button_Cancel"],
+                DefaultButton = ContentDialogButton.Close,
+            };
+            PrepareDialog(confirm);
+            if (await confirm.ShowAsync() != ContentDialogResult.Primary || _isClosing) return;
+            var editingTarget = string.Equals(CodeEditorViewModel.CurrentFilePath, filePath, StringComparison.OrdinalIgnoreCase);
+            if (editingTarget && !await CodeEditorViewModel.PrepareToSwitchAsync()) return;
+            if (_isClosing) return;
+            // 确认与编辑提示等待期间，定时任务仍可能启动；执行前再次检查。
+            if (script is not null && _coordinator.IsRunning(script.Id))
+            {
+                await _notifications.NotifyErrorAsync(Content.XamlRoot, "DeleteFile_Title", "DeleteFile_Running");
+                return;
+            }
+            ScriptFileDeletionService.MoveToRecycleBin(filePath, _scriptPathService.GetAll().Select(path => path.Path));
+            if (editingTarget)
+            {
+                await CodeEditorViewModel.LoadAsync(null);
+                _editorScriptId = null;
+                OnTerminalModeClick(this, new RoutedEventArgs());
+            }
+            await ImportConfiguredScriptsAsync();
+            _scriptListViewModel.Load();
+            await _fileTreeViewModel.RefreshAsync();
+            _scheduledTasksPage.Refresh();
+            _scheduleCoordinator.Rearm();
+            RefreshSelectedScriptPresentation();
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            DebugWriteUnexpected("DeleteScriptFile", ex);
+            if (!_isClosing)
+                await _notifications.NotifyErrorAsync(Content.XamlRoot, "DeleteFile_Title",
+                    ex is ValidationException validation ? validation.LocalizationKey : "DeleteFile_Failed");
+        }
+        finally { _dialogInFlight = false; }
     }
 
     private async void OnSidebarDelete(object? sender, ScriptListItemViewModel item)
@@ -1813,7 +1771,7 @@ public sealed partial class MainWindow : Window
 
     /// <summary>空状态引导「打开设置」（Phase E；非 flyout 来源，无延迟）。</summary>
     private async void OnSidebarOpenSettings(object? sender, EventArgs e) =>
-        await OpenSettingsGuardedAsync(null);
+        await OpenSettingsGuardedAsync(null, focusScriptPaths: true);
 
     /// <summary>「无解释器」空状态引导（评审修 5）：直达设置弹窗解释器分组。</summary>
     private async void OnSidebarOpenInterpreterSettings(object? sender, EventArgs e) =>
@@ -1837,6 +1795,8 @@ public sealed partial class MainWindow : Window
         _watcher.SyncFromStore();
         RefreshSelectedScriptPresentation();
     }
+
+
 
     // ==== 脚本登记对话框 ====
 
@@ -1891,6 +1851,53 @@ public sealed partial class MainWindow : Window
 #if DEBUG
         DebugLog.WriteLine($"Window: 侧栏宽度拖拽写回 {persistedWidth} DIP");
 #endif
+    }
+
+    private void OnRootLayoutSizeChanged(object sender, SizeChangedEventArgs e) =>
+        UpdateResponsiveShell(e.NewSize.Width);
+
+    private void OnSidebarToggleClick(object sender, RoutedEventArgs e)
+    {
+        if (_sidebarAutoCollapsed)
+        {
+            _sidebarNarrowExpanded = !_sidebarNarrowExpanded;
+        }
+        else
+        {
+            _settingsService.Update(settings => settings.SidebarCollapsed = !settings.SidebarCollapsed);
+            _settingsService.Flush();
+        }
+        UpdateResponsiveShell(RootLayout.ActualWidth);
+    }
+
+    private void UpdateResponsiveShell(double width)
+    {
+        if (width < 1 || SidebarCard is null || _settingsService is null) return;
+        var narrow = width < 1000;
+        if (!narrow) _sidebarNarrowExpanded = false;
+        _sidebarAutoCollapsed = narrow;
+        var showSidebar = narrow ? _sidebarNarrowExpanded : !_settingsService.Current.SidebarCollapsed;
+        SidebarCard.Visibility = showSidebar ? Visibility.Visible : Visibility.Collapsed;
+        SidebarResizeThumb.Visibility = showSidebar ? Visibility.Visible : Visibility.Collapsed;
+        SidebarColumn.Width = showSidebar
+            ? new GridLength(Math.Min(Math.Clamp(_settingsService.Current.SidebarWidth, SidebarWidthMin, SidebarWidthMax), Math.Max(180, width * 0.35)))
+            : new GridLength(0);
+
+        var compactNavigation = width < 1040;
+        var minimalNavigation = width < 820;
+        NavScriptsButton.Visibility = minimalNavigation ? Visibility.Collapsed : Visibility.Visible;
+        NavRunsButton.Visibility = minimalNavigation ? Visibility.Collapsed : Visibility.Visible;
+        NavSchedulesButton.Visibility = minimalNavigation ? Visibility.Collapsed : Visibility.Visible;
+        WorkspacesMenuButton.Visibility = minimalNavigation ? Visibility.Visible : Visibility.Collapsed;
+        SettingsButton.Visibility = compactNavigation ? Visibility.Collapsed : Visibility.Visible;
+        UtilityDivider.Visibility = compactNavigation ? Visibility.Collapsed : Visibility.Visible;
+        NavHelpButton.Visibility = compactNavigation ? Visibility.Collapsed : Visibility.Visible;
+        AuxiliaryMenuButton.Visibility = compactNavigation ? Visibility.Visible : Visibility.Collapsed;
+
+        var compactActions = width < 1160;
+        EditButton.Visibility = compactActions ? Visibility.Collapsed : Visibility.Visible;
+        NewFromTemplateButton.Visibility = compactActions ? Visibility.Collapsed : Visibility.Visible;
+        ScriptActionsOverflowButton.Visibility = compactActions ? Visibility.Visible : Visibility.Collapsed;
     }
 
     // ==== Phase E：记事本 / 收藏 / 刷新 / 监听 / 历史 / 首启向导 ====
@@ -2063,6 +2070,16 @@ public sealed partial class MainWindow : Window
 
     /// <summary>历史详情展示上限（字符）：与落库口径一致保留尾部（TailOutputBuffer 环形截断，评审修 13）。</summary>
     private const int HistoryDetailMaxChars = 64 * 1024;
+    private DataTemplate? _wideHistoryTemplate;
+    private void OnHistoryRetryClick(object sender, RoutedEventArgs e) => _historyViewModel.Retry();
+    private void OnHistoryPanelSizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        if (HistoryList is null || HistoryHeaders is null || RunsPage is null) return;
+        _wideHistoryTemplate ??= HistoryList.ItemTemplate;
+        var compact = e.NewSize.Width < 860;
+        HistoryHeaders.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
+        HistoryList.ItemTemplate = compact ? (DataTemplate)RunsPage.Resources["CompactHistoryTemplate"] : _wideHistoryTemplate;
+    }
 
     /// <summary>历史条目点击：展示完整输出（去 ANSI，本地时间口径见 VM）；受在途互斥。
     /// 超长输出仅渲染尾部 64KB（评审修 13：与落库尾部截断口径一致，防 200KB 全文本渲染卡 UI）。</summary>
@@ -2202,6 +2219,8 @@ public sealed partial class MainWindow : Window
 
     /// <summary>Ctrl+F：聚焦侧栏搜索框。</summary>
     private void OnShortcutFocusSearch(object sender, RoutedEventArgs e) => Sidebar.FocusSearchBox();
+
+
 
     /// <summary>Ctrl+Tab：循环切换终端标签。</summary>
     private void OnShortcutNextTab(object sender, RoutedEventArgs e)

@@ -30,6 +30,9 @@ public sealed partial class ScheduledTaskEditDialog : ContentDialog
         PrimaryButtonText = _localization["Button_Save"]; CloseButtonText = _localization["Button_Cancel"]; NameLabel.Text = _localization["Schedule_Field_Name"];
         ScriptLabel.Text = _localization["Schedule_Field_Script"]; TypeLabel.Text = _localization["Schedule_Field_Type"]; DateLabel.Text = _localization["Schedule_Field_StartDate"];
         TimeLabel.Text = _localization["Schedule_Field_Time"]; WeekdayLabel.Text = _localization["Schedule_Field_Weekdays"]; IntervalLabel.Text = _localization["Schedule_Field_Interval"]; EnabledToggle.Header = _localization["Schedule_Field_Enabled"];
+        var names = new[] { "Weekday_Mon", "Weekday_Tue", "Weekday_Wed", "Weekday_Thu", "Weekday_Fri", "Weekday_Sat", "Weekday_Sun" };
+        var boxes = new[] { Mon, Tue, Wed, Thu, Fri, Sat, Sun };
+        for (var i = 0; i < boxes.Length; i++) boxes[i].Content = _localization[names[i]];
     }
     private void OnTypeChanged(object sender, SelectionChangedEventArgs e)
     {

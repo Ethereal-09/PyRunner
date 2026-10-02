@@ -33,7 +33,7 @@ const initialFontSize = Number.isInteger(requestedFontSize) && requestedFontSize
 const term = new Terminal({
   cursorBlink: true,
   fontSize: initialFontSize,
-  lineHeight: 1.7,
+  lineHeight: 1.45,
   fontFamily: 'Cascadia Mono, Consolas, monospace',
   theme: terminalThemes[initialThemeName],
   minimumContrastRatio: 4.5,
@@ -81,7 +81,7 @@ window.chrome.webview.addEventListener('message', (e) => {
     const fontSize = Number(msg.fontSize);
     if (Number.isInteger(fontSize) && fontSize >= 10 && fontSize <= 24 && term.options.fontSize !== fontSize) {
       term.options.fontSize = fontSize;
-      requestAnimationFrame(() => fitAddon.fit());
+      scheduleFit();
     }
   } else if (msg.type === 'connected') {
     // 后端就绪：同步当前终端尺寸，保证 ConPTY 与 xterm 行列一致
@@ -137,8 +137,20 @@ terminalElement.addEventListener('contextmenu', (event) => {
   sendToHost({ type: 'pasteRequest' });
 });
 
-window.addEventListener('resize', () => {
-  fitAddon.fit();
-});
+// Refit the usable content box after layout, font loading, and mode changes.
+let fitFrame = 0;
+function scheduleFit() {
+  if (fitFrame) return;
+  fitFrame = requestAnimationFrame(() => {
+    fitFrame = 0;
+    if (terminalElement.clientWidth > 0 && terminalElement.clientHeight > 0) {
+      fitAddon.fit();
+    }
+  });
+}
+const terminalResizeObserver = new ResizeObserver(scheduleFit);
+terminalResizeObserver.observe(terminalElement);
+window.addEventListener('resize', scheduleFit);
+document.fonts.ready.then(scheduleFit);
 
 sendToHost({ type: 'ready' });

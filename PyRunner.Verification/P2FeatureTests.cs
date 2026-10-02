@@ -125,7 +125,7 @@ internal static class P2FeatureTests
             using var connection = factory.CreateOpenConnection();
             using var version = connection.CreateCommand();
             version.CommandText = "SELECT COALESCE(MAX(Version), 0) FROM SchemaVersion";
-            Verify(Convert.ToInt32(version.ExecuteScalar()) == 4, "database migrations reach schema version 4");
+            Verify(Convert.ToInt32(version.ExecuteScalar()) == 5, "database migrations reach schema version 5");
         }
         finally
         {

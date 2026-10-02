@@ -1,4 +1,4 @@
-﻿<Window
+<Window
     x:Class="PyRunner.MainWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -8,7 +8,7 @@
          thumb 样式需求改用本地属性（Padding=0）实现 -->
 
     <!-- index.html 原型三区骨架：标题栏(46) | 12px 卡片内容区 | 状态栏(34)。 -->
-    <Grid x:Name="RootLayout" Background="{ThemeResource AppMicaGradientBrush}">
+    <Grid x:Name="RootLayout" Background="{ThemeResource AppMicaGradientBrush}" SizeChanged="OnRootLayoutSizeChanged">
         <Grid.RowDefinitions>
             <RowDefinition Height="46" />
             <RowDefinition Height="*" />
@@ -96,6 +96,9 @@
                     PointerEntered="OnNavButtonPointerEntered" PointerPressed="OnNavButtonPointerPressed"
                     PointerReleased="OnNavButtonPointerReleased" PointerExited="OnNavButtonPointerExited"
                     Click="OnNavSchedulesClick" />
+
+                <Rectangle x:Name="UtilityDivider" Width="1" Height="18" Margin="8,0"
+                           Fill="{ThemeResource BorderSubtleBrush}" VerticalAlignment="Center" />
                 <Button
                     x:Name="SettingsButton"
                     AutomationProperties.AutomationId="TitleBarSettingsButton"
@@ -128,22 +131,6 @@
                     PointerReleased="OnNavButtonPointerReleased"
                     PointerExited="OnNavButtonPointerExited"
                     Click="OnNavHelpClick" />
-                <Button
-                    x:Name="NavAiButton"
-                    AutomationProperties.AutomationId="NavAiButton"
-                    Content="{x:Bind NavAiText}"
-                    MinWidth="48" MinHeight="30"
-                    Padding="14,5"
-                    FontSize="12"
-                    Template="{StaticResource PyRunnerButtonTemplate}"
-                    Background="Transparent"
-                    Foreground="{ThemeResource TextSecondaryBrush}"
-                    BorderBrush="Transparent"
-                    PointerEntered="OnNavButtonPointerEntered"
-                    PointerPressed="OnNavButtonPointerPressed"
-                    PointerReleased="OnNavButtonPointerReleased"
-                    PointerExited="OnNavButtonPointerExited"
-                    Click="OnNavAiClick" />
             </StackPanel>
 
             <!-- 只把中间空白区交给系统作为窗口拖动区。导航和主题按钮必须位于
@@ -151,8 +138,42 @@
             <Grid
                 x:Name="TitleBarDragRegion"
                 Grid.Column="2"
+                Margin="116,0,0,0"
                 Background="Transparent" />
 
+            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center"
+                        HorizontalAlignment="Left" Spacing="4" Margin="4,0,0,0">
+                <Button x:Name="WorkspacesMenuButton" Content="&#xE8B7;" FontFamily="Segoe Fluent Icons"
+                        Width="32" Height="30" Padding="5,2" Visibility="Collapsed"
+                        AutomationProperties.AutomationId="WorkspacesMenuButton"
+                        AutomationProperties.Name="{x:Bind WorkspacesMenuText}"
+                        ToolTipService.ToolTip="{x:Bind WorkspacesMenuText}">
+                    <Button.Flyout>
+                        <MenuFlyout>
+                            <MenuFlyoutItem Text="{x:Bind NavScriptsText}" Click="OnNavScriptsClick" />
+                            <MenuFlyoutItem Text="{x:Bind NavRunsText}" Click="OnNavRunsClick" />
+                            <MenuFlyoutItem Text="{x:Bind NavSchedulesText}" Click="OnNavSchedulesClick" />
+                        </MenuFlyout>
+                    </Button.Flyout>
+                </Button>
+                <Button x:Name="SidebarToggleButton" Content="&#xE700;" FontFamily="Segoe Fluent Icons"
+                        Width="32" Height="30" Padding="5,2" Click="OnSidebarToggleClick"
+                        AutomationProperties.AutomationId="SidebarToggleButton"
+                        AutomationProperties.Name="{x:Bind SidebarToggleText}"
+                        ToolTipService.ToolTip="{x:Bind SidebarToggleText}" />
+                <Button x:Name="AuxiliaryMenuButton" Content="&#xE712;" FontFamily="Segoe Fluent Icons"
+                        Width="32" Height="30" Padding="5,2" Visibility="Collapsed"
+                        AutomationProperties.AutomationId="AuxiliaryMenuButton"
+                        AutomationProperties.Name="{x:Bind AuxiliaryMenuText}"
+                        ToolTipService.ToolTip="{x:Bind AuxiliaryMenuText}">
+                    <Button.Flyout>
+                        <MenuFlyout>
+                            <MenuFlyoutItem Text="{x:Bind NavSettingsText}" Click="OnSettingsClick" />
+                            <MenuFlyoutItem Text="{x:Bind NavHelpText}" Click="OnNavHelpClick" />
+                        </MenuFlyout>
+                    </Button.Flyout>
+                </Button>
+            </StackPanel>
             <Button
                 x:Name="ThemeButton"
                 AutomationProperties.AutomationId="TitleBarThemeButton"
@@ -186,6 +207,7 @@
             </Grid.ColumnDefinitions>
 
             <Border
+                x:Name="SidebarCard"
                 Grid.Column="0"
                 Background="{ThemeResource SidebarSurfaceBrush}"
                 BorderBrush="{ThemeResource BorderSubtleBrush}"
@@ -217,6 +239,15 @@
                 BorderThickness="1"
                 CornerRadius="10">
                 <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <InfoBar x:Name="RunResultNotice"
+                             AutomationProperties.AutomationId="RunResultNotice"
+                             IsOpen="False" IsClosable="True" Severity="Warning"
+                             Margin="12,8,12,0" />
+                    <Grid Grid.Row="1">
                     <Grid x:Name="WorkArea">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="76" />
@@ -264,6 +295,7 @@
                             <TextBlock
                                 x:Name="SelectedScriptMetadataText"
                                 AutomationProperties.AutomationId="SelectedScriptMetadata"
+                                ToolTipService.ToolTip="{x:Bind ViewModel.SelectedScript.FilePath, Mode=OneWay}"
                                 Text=""
                                 FontSize="{ThemeResource FontSizeCaption}"
                                 Foreground="{ThemeResource TextMutedBrush}"
@@ -350,6 +382,18 @@
                                 Content="{x:Bind NewFromTemplateText, Mode=OneTime}"
                                 MinWidth="96" Height="36" Padding="14,8"
                                 Click="OnNewFromTemplateClick" />
+                            <Button x:Name="ScriptActionsOverflowButton" Content="&#xE712;"
+                                    FontFamily="Segoe Fluent Icons" Width="36" Height="36"
+                                    Padding="6" Visibility="Collapsed"
+                                    AutomationProperties.AutomationId="ScriptActionsOverflowButton"
+                                    AutomationProperties.Name="{x:Bind AuxiliaryMenuText}">
+                                <Button.Flyout>
+                                    <MenuFlyout>
+                                        <MenuFlyoutItem x:Name="OverflowEditItem" Text="{x:Bind EditText}" Click="OnEditClick" />
+                                        <MenuFlyoutItem Text="{x:Bind NewFromTemplateText}" Click="OnNewFromTemplateClick" />
+                                    </MenuFlyout>
+                                </Button.Flyout>
+                            </Button>
                         </StackPanel>
                     </Grid>
 
@@ -357,200 +401,36 @@
                     <Grid x:Name="ScriptsPage" Grid.Row="1" Background="{ThemeResource TerminalBackgroundBrush}">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
                             <RowDefinition Height="*" />
                         </Grid.RowDefinitions>
-                        <Grid.Resources>
-                            <views:BoolToVisibilityConverter x:Key="DependencyBoolToVisibility" />
-                        </Grid.Resources>
-                        <Expander
-                            x:Name="DependencyExpander"
-                            Grid.Row="0"
-                            AutomationProperties.AutomationId="DependencyExpander"
-                            IsExpanded="{x:Bind DependencyViewModel.IsExpanded, Mode=TwoWay}"
-                            Visibility="{Binding HasContext, Converter={StaticResource DependencyBoolToVisibility}}"
-                            Background="{ThemeResource MainSurfaceBrush}"
-                            HorizontalAlignment="Stretch"
-                            HorizontalContentAlignment="Stretch">
-                            <Expander.Header>
-                                <Grid MinHeight="42" Padding="4,0">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-                                    <FontIcon Glyph="&#xE896;" FontSize="15" Foreground="{ThemeResource AccentLightBrush}" />
-                                    <StackPanel Grid.Column="1" Margin="10,0,12,0" VerticalAlignment="Center">
-                                        <TextBlock
-                                            Text="{x:Bind DependencyViewModel.SectionTitle, Mode=OneWay}"
-                                            FontWeight="SemiBold"
-                                            Foreground="{ThemeResource TextPrimaryBrush}" />
-                                        <TextBlock
-                                            Text="{x:Bind DependencyViewModel.StatusText, Mode=OneWay}"
-                                            FontSize="11"
-                                            Foreground="{ThemeResource TextMutedBrush}"
-                                            TextTrimming="CharacterEllipsis" />
-                                    </StackPanel>
-                                    <ProgressRing
-                                        Grid.Column="2"
-                                        Width="18" Height="18"
-                                        IsActive="{x:Bind DependencyViewModel.IsBusy, Mode=OneWay}"
-                                        Visibility="{Binding IsBusy, Converter={StaticResource DependencyBoolToVisibility}}" />
-                                </Grid>
-                            </Expander.Header>
-                            <ScrollViewer
-                                MaxHeight="320"
-                                HorizontalScrollMode="Disabled"
-                                HorizontalScrollBarVisibility="Disabled"
-                                VerticalScrollBarVisibility="Auto">
-                                <StackPanel Padding="12,4,12,12" Spacing="10">
-                                    <TextBlock
-                                        Text="{x:Bind DependencyViewModel.NetworkNotice, Mode=OneWay}"
-                                        TextWrapping="Wrap"
-                                        FontSize="11"
-                                        Foreground="{ThemeResource StatusRunningBrush}" />
 
-                                    <Grid ColumnSpacing="8">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto" />
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock Text="{x:Bind DependencyViewModel.RequirementsLabel, Mode=OneWay}" Foreground="{ThemeResource TextMutedBrush}" />
-                                        <TextBlock
-                                            Grid.Column="1"
-                                            Text="{x:Bind DependencyViewModel.RequirementsPath, Mode=OneWay}"
-                                            TextWrapping="Wrap"
-                                            IsTextSelectionEnabled="True"
-                                            Foreground="{ThemeResource TextBodyBrush}" />
-                                        <Button
-                                            Grid.Column="2"
-                                            Content="{x:Bind DependencyViewModel.CopyText, Mode=OneWay}"
-                                            Command="{x:Bind DependencyViewModel.CopyRequirementsPathCommand}"
-                                            MinHeight="28" Padding="10,3" />
-                                    </Grid>
-
-                                    <Grid ColumnSpacing="8">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto" />
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock Text="{x:Bind DependencyViewModel.InterpreterLabel, Mode=OneWay}" Foreground="{ThemeResource TextMutedBrush}" />
-                                        <StackPanel Grid.Column="1">
-                                            <TextBlock Text="{x:Bind DependencyViewModel.InterpreterName, Mode=OneWay}" Foreground="{ThemeResource TextBodyBrush}" />
-                                            <TextBlock
-                                                Text="{x:Bind DependencyViewModel.InterpreterPath, Mode=OneWay}"
-                                                TextWrapping="Wrap"
-                                                IsTextSelectionEnabled="True"
-                                                FontSize="11"
-                                                Foreground="{ThemeResource TextMutedBrush}" />
-                                        </StackPanel>
-                                        <Button
-                                            Grid.Column="2"
-                                            Content="{x:Bind DependencyViewModel.CopyText, Mode=OneWay}"
-                                            Command="{x:Bind DependencyViewModel.CopyInterpreterPathCommand}"
-                                            MinHeight="28" Padding="10,3" />
-                                    </Grid>
-
-                                    <StackPanel
-                                        Visibility="{Binding HasRisks, Converter={StaticResource DependencyBoolToVisibility}}"
-                                        Spacing="4">
-                                        <TextBlock Text="{x:Bind DependencyViewModel.RisksTitle, Mode=OneWay}" FontWeight="SemiBold" Foreground="{ThemeResource StatusErrorBrush}" />
-                                        <ItemsControl ItemsSource="{x:Bind DependencyViewModel.RiskMessages, Mode=OneWay}">
-                                            <ItemsControl.ItemTemplate>
-                                                <DataTemplate>
-                                                    <TextBlock Text="{Binding}" TextWrapping="Wrap" IsTextSelectionEnabled="True" FontSize="11" Foreground="{ThemeResource TextBodyBrush}" />
-                                                </DataTemplate>
-                                            </ItemsControl.ItemTemplate>
-                                        </ItemsControl>
-                                    </StackPanel>
-
-                                    <ListView
-                                        ItemsSource="{x:Bind DependencyViewModel.Items, Mode=OneWay}"
-                                        MaxHeight="150"
-                                        SelectionMode="None"
-                                        IsItemClickEnabled="False"
-                                        Visibility="{Binding HasItems, Converter={StaticResource DependencyBoolToVisibility}}">
-                                        <ListView.ItemTemplate>
-                                            <DataTemplate>
-                                                <Grid Padding="2,4" ColumnSpacing="12">
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="2*" />
-                                                        <ColumnDefinition Width="3*" />
-                                                        <ColumnDefinition Width="Auto" />
-                                                    </Grid.ColumnDefinitions>
-                                                    <StackPanel>
-                                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-                                                        <TextBlock Text="{Binding Requested}" FontSize="11" Foreground="{ThemeResource TextMutedBrush}" TextTrimming="CharacterEllipsis" />
-                                                    </StackPanel>
-                                                    <TextBlock Grid.Column="1" VerticalAlignment="Center" TextWrapping="Wrap">
-                                                        <Run Text="{Binding InstalledVersion}" />
-                                                        <Run Text=" → " />
-                                                        <Run Text="{Binding PlannedVersion}" />
-                                                    </TextBlock>
-                                                    <TextBlock Grid.Column="2" Text="{Binding Status}" VerticalAlignment="Center" Foreground="{ThemeResource StatusRunningBrush}" />
-                                                </Grid>
-                                            </DataTemplate>
-                                        </ListView.ItemTemplate>
-                                    </ListView>
-
-                                    <Expander
-                                        Header="{x:Bind DependencyViewModel.DetailsTitle, Mode=OneWay}"
-                                        Visibility="{Binding HasDiagnostic, Converter={StaticResource DependencyBoolToVisibility}}">
-                                        <TextBox
-                                            Text="{x:Bind DependencyViewModel.DiagnosticText, Mode=OneWay}"
-                                            IsReadOnly="True"
-                                            AcceptsReturn="True"
-                                            TextWrapping="Wrap"
-                                            MaxHeight="130" />
-                                    </Expander>
-
-                                    <TextBlock
-                                        Text="{x:Bind DependencyViewModel.CompatibilityText, Mode=OneWay}"
-                                        TextWrapping="Wrap"
-                                        IsTextSelectionEnabled="True"
-                                        Foreground="{ThemeResource StatusRunningBrush}" />
-
-                                    <TextBlock
-                                        Text="{x:Bind DependencyViewModel.CommandPreview, Mode=OneWay}"
-                                        TextWrapping="Wrap"
-                                        IsTextSelectionEnabled="True"
-                                        FontFamily="{ThemeResource TerminalFontFamily}"
-                                        FontSize="11"
-                                        Foreground="{ThemeResource TextMutedBrush}" />
-
-                                    <StackPanel Orientation="Horizontal" Spacing="8">
-                                        <Button
-                                            AutomationProperties.AutomationId="DependencyCheckButton"
-                                            Content="{x:Bind DependencyViewModel.CheckText, Mode=OneWay}"
-                                            Command="{x:Bind DependencyViewModel.CheckCommand}"
-                                            MinHeight="32" Padding="14,5" />
-                                        <Button
-                                            AutomationProperties.AutomationId="DependencyInstallButton"
-                                            Content="{x:Bind DependencyViewModel.InstallText, Mode=OneWay}"
-                                            Command="{x:Bind DependencyViewModel.InstallCommand}"
-                                            MinHeight="32" Padding="14,5" />
-                                        <Button
-                                            AutomationProperties.AutomationId="DependencyCancelButton"
-                                            Content="{x:Bind DependencyViewModel.CancelText, Mode=OneWay}"
-                                            Command="{x:Bind DependencyViewModel.CancelCommand}"
-                                            MinHeight="32" Padding="14,5" />
-                                    </StackPanel>
-                                </StackPanel>
-                            </ScrollViewer>
-                        </Expander>
-                        <Grid Grid.Row="1" Padding="12,6" Background="{ThemeResource MainSurfaceBrush}">
+                        <Grid Grid.Row="0" Padding="12,4" Background="{ThemeResource MainSurfaceBrush}">
                             <StackPanel Orientation="Horizontal" Spacing="8">
                                 <ToggleButton x:Name="TerminalModeButton" Content="{x:Bind TerminalModeText, Mode=OneTime}"
-                                              IsChecked="True" Click="OnTerminalModeClick" />
+                                              AutomationProperties.AutomationId="TerminalModeButton"
+                                              MinHeight="28" Padding="14,3" FontSize="12" IsChecked="True" Click="OnTerminalModeClick">
+                                    <ToggleButton.Resources>
+                                        <SolidColorBrush x:Key="ToggleButtonBackgroundChecked" Color="{ThemeResource AccentColor}" />
+                                        <SolidColorBrush x:Key="ToggleButtonBackgroundCheckedPointerOver" Color="{ThemeResource AccentColor}" />
+                                        <StaticResource x:Key="ToggleButtonForegroundChecked" ResourceKey="PrimaryButtonForegroundBrush" />
+                                        <StaticResource x:Key="ToggleButtonForegroundCheckedPointerOver" ResourceKey="PrimaryButtonForegroundBrush" />
+                                    </ToggleButton.Resources>
+                                </ToggleButton>
                                 <ToggleButton x:Name="CodeModeButton" Content="{x:Bind CodeModeText, Mode=OneTime}"
-                                              Click="OnCodeModeClick" />
+                                              AutomationProperties.AutomationId="CodeModeButton"
+                                              MinHeight="28" Padding="14,3" FontSize="12" Click="OnCodeModeClick">
+                                    <ToggleButton.Resources>
+                                        <SolidColorBrush x:Key="ToggleButtonBackgroundChecked" Color="{ThemeResource AccentColor}" />
+                                        <SolidColorBrush x:Key="ToggleButtonBackgroundCheckedPointerOver" Color="{ThemeResource AccentColor}" />
+                                        <StaticResource x:Key="ToggleButtonForegroundChecked" ResourceKey="PrimaryButtonForegroundBrush" />
+                                        <StaticResource x:Key="ToggleButtonForegroundCheckedPointerOver" ResourceKey="PrimaryButtonForegroundBrush" />
+                                    </ToggleButton.Resources>
+                                </ToggleButton>
                             </StackPanel>
                         </Grid>
                         <TabView
                             x:Name="Tabs"
-                            Grid.Row="2"
+                            Grid.Row="1"
                             AutomationProperties.AutomationId="WorkspaceTabs"
                             IsAddTabButtonVisible="False"
                             HorizontalAlignment="Stretch"
@@ -582,7 +462,7 @@
                                     x:Name="TerminalCommandText"
                                     AutomationProperties.AutomationId="TerminalCommandPreview"
                                     Text=""
-                                    MinWidth="320"
+                                    MaxWidth="360"
                                     Margin="16,0,20,0"
                                     FontFamily="{ThemeResource TerminalFontFamily}"
                                     FontSize="{ThemeResource FontSizeOverline}"
@@ -594,12 +474,12 @@
                         </TabView>
                         <views:EmptyStateView
                             x:Name="WorkspaceHint"
-                            Grid.Row="2"
+                            Grid.Row="1"
                             IconTemplate="{StaticResource Icon_Terminal}"
                             Description="{x:Bind ViewModel.WorkspaceHintText, Mode=OneWay}"
                             ShowButton="False"
                             IsHitTestVisible="False" />
-                        <Grid x:Name="CodeWorkspace" Grid.Row="2" Visibility="Collapsed"
+                        <Grid x:Name="CodeWorkspace" Grid.Row="1" Visibility="Collapsed"
                               Background="{ThemeResource MainSurfaceBrush}">
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto" />
@@ -639,6 +519,19 @@
                         <Grid.Resources>
                             <views:RunStatusToBrushConverter x:Key="HistoryStatusToBrush" />
                             <views:BoolToVisibilityConverter x:Key="HistoryBoolToVisibility" />
+                            <DataTemplate x:Key="CompactHistoryTemplate">
+                                <Border Margin="6,4" Padding="12" Background="{ThemeResource PanelSurfaceRaisedBrush}" CornerRadius="8">
+                                    <StackPanel Spacing="6">
+                                        <TextBlock Text="{Binding TimeText}" Foreground="{ThemeResource TextSecondaryBrush}" />
+                                        <StackPanel Orientation="Horizontal" Spacing="16">
+                                            <TextBlock Text="{Binding StatusText}" Foreground="{Binding Status, Converter={StaticResource HistoryStatusToBrush}}" />
+                                            <TextBlock Text="{Binding ExitCodeText}" ToolTipService.ToolTip="{Binding ExitCodeText}" />
+                                        </StackPanel>
+                                        <TextBlock Text="{Binding MetricsText}" TextWrapping="Wrap" Foreground="{ThemeResource TextSecondaryBrush}" />
+                                        <TextBlock Text="{Binding Summary}" TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis" />
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
                         </Grid.Resources>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="58" />
@@ -652,9 +545,22 @@
                                 Foreground="{ThemeResource TextTitleBrush}"
                                 VerticalAlignment="Center" />
                         </Grid>
-                        <Grid x:Name="HistoryPanel" Grid.Row="1" Margin="10">
+                        <Grid x:Name="HistoryPanel" Grid.Row="1" Margin="10" SizeChanged="OnHistoryPanelSizeChanged">
+                            <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
+                            <InfoBar Grid.Row="0" IsOpen="{Binding HasLoadError, Mode=OneWay}" IsClosable="False" Severity="Error" Message="{Binding LoadErrorText}">
+                                <InfoBar.ActionButton><Button Content="{Binding RetryText}" Click="OnHistoryRetryClick" /></InfoBar.ActionButton>
+                            </InfoBar>
+                            <Grid x:Name="HistoryHeaders" Grid.Row="1" Margin="22,8" ColumnSpacing="16">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="140" /><ColumnDefinition Width="80" /><ColumnDefinition Width="90" /><ColumnDefinition Width="180" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                                <TextBlock Text="{Binding TimeHeaderText}" />
+                                <TextBlock Grid.Column="1" Text="{Binding StatusHeaderText}" />
+                                <TextBlock Grid.Column="2" Text="{Binding ExitHeaderText}" />
+                                <TextBlock Grid.Column="3" Text="{Binding MetricsHeaderText}" />
+                                <TextBlock Grid.Column="4" Text="{Binding OutputHeaderText}" />
+                            </Grid>
                             <ListView
                                 x:Name="HistoryList"
+                                Grid.Row="2"
                                 AutomationProperties.AutomationId="HistoryList"
                                 ItemsSource="{Binding Records}"
                                 SelectionMode="None"
@@ -678,7 +584,7 @@
                                                 <TextBlock Text="{Binding TimeText}" FontFamily="{ThemeResource TerminalFontFamily}" Foreground="{ThemeResource TextSecondaryBrush}" VerticalAlignment="Center" />
                                                 <TextBlock Grid.Column="1" Text="{Binding StatusText}" Foreground="{Binding Status, Converter={StaticResource HistoryStatusToBrush}}" VerticalAlignment="Center" />
                                                 <TextBlock Grid.Column="2" Text="{Binding ExitCodeText}" FontFamily="{ThemeResource TerminalFontFamily}" Foreground="{ThemeResource TextMutedBrush}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-                                                <TextBlock Grid.Column="3" Text="{Binding MetricsText}" FontFamily="{ThemeResource TerminalFontFamily}" Foreground="{ThemeResource TextMutedBrush}" VerticalAlignment="Center" />
+                                                <TextBlock Grid.Column="3" Text="{Binding MetricsText}" ToolTipService.ToolTip="{Binding MetricsText}" TextWrapping="Wrap" FontFamily="{ThemeResource TerminalFontFamily}" Foreground="{ThemeResource TextMutedBrush}" VerticalAlignment="Center" />
                                                 <TextBlock Grid.Column="4" Text="{Binding Summary}" ToolTipService.ToolTip="{Binding Summary}" Foreground="{ThemeResource TextMutedBrush}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" MaxLines="1" VerticalAlignment="Center" />
                                             </Grid>
                                         </Border>
@@ -687,6 +593,7 @@
                             </ListView>
                             <views:EmptyStateView
                                 x:Name="HistoryEmpty"
+                                Grid.Row="2"
                                 IconTemplate="{StaticResource Icon_Clock}"
                                 Description="{Binding EmptyText}"
                                 ShowButton="False"
@@ -707,12 +614,8 @@
                     HorizontalContentAlignment="Stretch"
                     VerticalContentAlignment="Stretch"
                     Visibility="Collapsed" />
-                <ContentControl
-                    x:Name="AiAssistantPageHost"
-                    AutomationProperties.AutomationId="AiAssistantPageHost"
-                    HorizontalContentAlignment="Stretch"
-                    VerticalContentAlignment="Stretch"
-                    Visibility="Collapsed" />
+
+                </Grid>
                 </Grid>
             </Border>
         </Grid>
@@ -847,6 +750,7 @@
                     <KeyboardAccelerator Key="Escape" />
                 </Button.KeyboardAccelerators>
             </Button>
+
         </StackPanel>
     </Grid>
 </Window>

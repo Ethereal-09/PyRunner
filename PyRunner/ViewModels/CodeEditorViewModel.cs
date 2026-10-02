@@ -1,5 +1,4 @@
 using System.Text.Json;
-using System.Security.Cryptography;
 using System.Text;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -8,11 +7,10 @@ using Microsoft.UI.Xaml.Controls;
 using PyRunner.Editor;
 using PyRunner.Models;
 using PyRunner.Services;
-using PyRunner.Services.AI;
 
 namespace PyRunner.ViewModels;
 
-public sealed partial class CodeEditorViewModel : ObservableObject, IDisposable, IAiEditorBridge
+public sealed partial class CodeEditorViewModel : ObservableObject, IDisposable
 {
     private const int ProtocolVersion = 1;
     private const string VirtualHostName = "pyrunner-editor.local";
@@ -26,17 +24,12 @@ public sealed partial class CodeEditorViewModel : ObservableObject, IDisposable,
     private CodeDocument? _document;
     private TaskCompletionSource<string?>? _textRequest;
     private string? _textRequestId;
-    private TaskCompletionSource<AiEditorContext?>? _aiContextRequest;
-    private string? _aiContextRequestId;
-    private TaskCompletionSource<bool>? _aiApplyRequest;
-    private string? _aiApplyRequestId;
     private string? _pendingText;
     private bool _pendingDirty;
     private CancellationTokenSource? _draftDelay;
     private bool _pageReady;
     private bool _disposed;
     private bool _isLightTheme;
-    private bool _isUntitled;
 
     [ObservableProperty] private bool hasDocument;
     [ObservableProperty] private bool isDirty;
@@ -143,8 +136,12 @@ public sealed partial class CodeEditorViewModel : ObservableObject, IDisposable,
         {
             _document = null;
             _pendingText = null;
+            _pendingDirty = false;
+            FilePath = string.Empty;
             HasDocument = false;
             IsDirty = false;
+            HasError = false;
+            Post(new { type = "clearDocument", version = ProtocolVersion });
             StatusText = _localization["Editor_Status_NoDocument"];
             NotifyCommands();
             return;
@@ -156,7 +153,6 @@ public sealed partial class CodeEditorViewModel : ObservableObject, IDisposable,
         {
             var document = await _documents.LoadAsync(scriptPath, cancellationToken);
             _document = document;
-            _isUntitled = false;
             FilePath = document.Fingerprint.Path;
             HasDocument = true;
             IsReadOnly = document.IsReadOnly;
@@ -208,43 +204,9 @@ public sealed partial class CodeEditorViewModel : ObservableObject, IDisposable,
         if (!IsDirty) await LoadAsync(_document.Fingerprint.Path, cancellationToken);
     }
 
-    public async Task<AiEditorContext?> RequestAiContextAsync(CancellationToken cancellationToken = default)
-    {
-        if (!HasDocument || !_pageReady || _document is null) return null;
-        var completion = new TaskCompletionSource<AiEditorContext?>(TaskCreationOptions.RunContinuationsAsynchronously);
-        _aiContextRequest?.TrySetResult(null);
-        _aiContextRequest = completion;
-        _aiContextRequestId = Guid.NewGuid().ToString("N");
-        Post(new { type = "requestAiContext", version = ProtocolVersion, requestId = _aiContextRequestId });
-        try { return await completion.Task.WaitAsync(TimeSpan.FromSeconds(3), cancellationToken); }
-        catch { return null; }
-        finally
-        {
-            if (ReferenceEquals(_aiContextRequest, completion)) { _aiContextRequest = null; _aiContextRequestId = null; }
-        }
-    }
 
-    public async Task<bool> ApplyAiCandidateAsync(AiEditorContext original, string candidate,
-        CancellationToken cancellationToken = default)
-    {
-        if (!CanEdit || candidate.Length > CodeDocumentService.EditableSizeLimit) return false;
-        var completion = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-        _aiApplyRequest?.TrySetResult(false);
-        _aiApplyRequest = completion;
-        _aiApplyRequestId = Guid.NewGuid().ToString("N");
-        Post(new
-        {
-            type = "applyAiCandidate", version = ProtocolVersion, requestId = _aiApplyRequestId,
-            start = original.SelectionStart, end = original.SelectionEnd,
-            expected = original.Text, candidate,
-        });
-        try { return await completion.Task.WaitAsync(TimeSpan.FromSeconds(3), cancellationToken); }
-        catch { return false; }
-        finally
-        {
-            if (ReferenceEquals(_aiApplyRequest, completion)) { _aiApplyRequest = null; _aiApplyRequestId = null; }
-        }
-    }
+
+
 
     public async Task ReloadFromDiskAsync(CancellationToken cancellationToken = default)
     {
@@ -252,26 +214,7 @@ public sealed partial class CodeEditorViewModel : ObservableObject, IDisposable,
         await LoadAsync(_document.Fingerprint.Path, cancellationToken);
     }
 
-    public void OpenGeneratedDraft(string code)
-    {
-        if (_disposed || code.Length > CodeDocumentService.EditableSizeLimit) return;
-        var bytes = Encoding.UTF8.GetBytes(code);
-        _document = new CodeDocument(code, "utf-8", false, "\r\n", false, string.Empty,
-            new CodeDocumentFingerprint("GeneratedScript.py", bytes.LongLength, DateTimeOffset.UtcNow,
-                Convert.ToHexString(SHA256.HashData(bytes))));
-        _isUntitled = true;
-        FilePath = _localization["AI_GeneratedDraftName"];
-        HasDocument = true;
-        IsReadOnly = false;
-        IsDirty = true;
-        EncodingText = "utf-8";
-        NewLineText = "CRLF";
-        StatusText = _localization["AI_Status_GeneratedDraft"];
-        _pendingText = code;
-        _pendingDirty = true;
-        SendDocument();
-        NotifyCommands();
-    }
+
 
     public void ApplyTheme(bool isLight)
     {
@@ -289,13 +232,7 @@ public sealed partial class CodeEditorViewModel : ObservableObject, IDisposable,
             var text = await RequestTextAsync();
             if (text is null) { StatusText = _localization["Editor_Error_Bridge"]; return; }
             CodeDocumentSaveResult result;
-            if (_isUntitled)
-            {
-                var path = await _interaction.PickSaveAsPathAsync("GeneratedScript.py");
-                if (path is null) return;
-                result = await _documents.SaveAsAsync(_document, path, text);
-            }
-            else result = await _documents.SaveAsync(_document, text, overwriteExternalChanges: false);
+            result = await _documents.SaveAsync(_document, text, overwriteExternalChanges: false);
             if (result.Status == CodeDocumentSaveStatus.Conflict)
             {
                 var choice = await _interaction.ResolveExternalConflictAsync();
@@ -317,7 +254,6 @@ public sealed partial class CodeEditorViewModel : ObservableObject, IDisposable,
             if (result.Status == CodeDocumentSaveStatus.Saved && result.Document is not null)
             {
                 _document = result.Document;
-                _isUntitled = false;
                 FilePath = result.Document.Fingerprint.Path;
                 IsDirty = false;
                 _drafts.Delete(result.Document.Fingerprint.Path);
@@ -384,28 +320,6 @@ public sealed partial class CodeEditorViewModel : ObservableObject, IDisposable,
                         requestId.GetString() == _textRequestId && root.TryGetProperty("text", out var text) && text.GetString() is { } value &&
                         value.Length <= CodeDocumentService.EditableSizeLimit)
                         _textRequest.TrySetResult(value);
-                    break;
-                case "aiContext":
-                    if (_aiContextRequest is not null && root.TryGetProperty("requestId", out var aiRequestId) &&
-                        aiRequestId.GetString() == _aiContextRequestId && root.TryGetProperty("text", out var aiText) &&
-                        aiText.GetString() is { } contextText && contextText.Length <= CodeDocumentService.EditableSizeLimit &&
-                        root.TryGetProperty("selectionStart", out var startValue) && startValue.TryGetInt32(out var start) &&
-                        root.TryGetProperty("selectionEnd", out var endValue) && endValue.TryGetInt32(out var end) &&
-                        start >= 0 && end >= start && root.TryGetProperty("isSelection", out var selectionValue) &&
-                        selectionValue.ValueKind is JsonValueKind.True or JsonValueKind.False)
-                    {
-                        var sha = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(contextText)));
-                        _aiContextRequest.TrySetResult(new AiEditorContext(contextText,
-                            Path.GetFileName(_document?.Fingerprint.Path) ?? "script.py",
-                            selectionValue.GetBoolean(), start, end, sha,
-                            FilePath: _document?.Fingerprint.Path));
-                    }
-                    break;
-                case "aiApplyResult":
-                    if (_aiApplyRequest is not null && root.TryGetProperty("requestId", out var applyRequestId) &&
-                        applyRequestId.GetString() == _aiApplyRequestId && root.TryGetProperty("applied", out var applied) &&
-                        applied.ValueKind is JsonValueKind.True or JsonValueKind.False)
-                        _aiApplyRequest.TrySetResult(applied.GetBoolean());
                     break;
                 case "saveRequest":
                     if (SaveCommand.CanExecute(null)) _ = SaveCommand.ExecuteAsync(null);
@@ -493,8 +407,6 @@ public sealed partial class CodeEditorViewModel : ObservableObject, IDisposable,
         _disposed = true;
         _draftDelay?.Cancel();
         _textRequest?.TrySetResult(null);
-        _aiContextRequest?.TrySetResult(null);
-        _aiApplyRequest?.TrySetResult(false);
         _localization.LanguageChanged -= OnLanguageChanged;
         if (_core is not null) { _core.WebMessageReceived -= OnMessage; _core.NavigationStarting -= OnNavigationStarting; }
         try { _webView?.Close(); } catch { }

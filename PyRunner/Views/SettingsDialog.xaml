@@ -18,8 +18,21 @@
         <local:MiddleEllipsisConverter x:Key="MiddleEllipsis" />
     </ContentDialog.Resources>
 
-    <ScrollViewer x:Name="SettingsScroller" VerticalScrollMode="Auto" VerticalScrollBarVisibility="Auto" MaxHeight="560">
-        <StackPanel MinWidth="320" MaxWidth="560" Spacing="12">
+    <Grid MinWidth="320" MaxWidth="680" RowSpacing="10">
+        <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
+        <ScrollViewer HorizontalScrollMode="Auto" HorizontalScrollBarVisibility="Auto"
+                      VerticalScrollMode="Disabled" VerticalScrollBarVisibility="Disabled">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+                <Button Content="{Binding PathsNavText}" Tag="paths" Click="OnSectionNavigationClick" />
+                <Button Content="{Binding InterpretersNavText}" Tag="interpreters" Click="OnSectionNavigationClick" />
+                <Button Content="{Binding RunAndTerminalText}" Tag="run" Click="OnSectionNavigationClick" />
+                <Button Content="{Binding LanguageNavText}" Tag="language" Click="OnSectionNavigationClick" />
+            </StackPanel>
+        </ScrollViewer>
+    <ScrollViewer x:Name="SettingsScroller" Grid.Row="1" VerticalScrollMode="Auto" VerticalScrollBarVisibility="Auto" MaxHeight="560">
+        <StackPanel MinWidth="320" MaxWidth="660" Spacing="12">
+            <TextBlock Text="{Binding ImmediateChangesText}" TextWrapping="Wrap" Foreground="{ThemeResource TextSecondaryBrush}" />
+            <TextBlock Text="{Binding DraftChangesText}" TextWrapping="Wrap" Foreground="{ThemeResource TextSecondaryBrush}" />
 
             <!-- ==== 分组一：脚本路径列表 ==== -->
             <TextBlock
@@ -55,6 +68,8 @@
                             <Button
                                 Grid.Column="2"
                                 AutomationProperties.AutomationId="SettingsRemovePathButton"
+                                AutomationProperties.Name="{Binding RemoveText}"
+                                ToolTipService.ToolTip="{Binding RemoveText}"
                                 Content="&#xE711;"
                                 FontFamily="Segoe MDL2 Assets"
                                 FontSize="10"
@@ -115,6 +130,8 @@
                             <Button
                                 Grid.Column="3"
                                 AutomationProperties.AutomationId="SettingsRemoveInterpreterButton"
+                                AutomationProperties.Name="{Binding RemoveText}"
+                                ToolTipService.ToolTip="{Binding RemoveText}"
                                 Content="&#xE711;"
                                 FontFamily="Segoe MDL2 Assets"
                                 FontSize="10"
@@ -149,6 +166,7 @@
 
             <!-- ==== 分组三：运行选项（勾选即持久化） ==== -->
             <TextBlock
+                x:Name="RunOptionsGroupTitle"
                 Text="{Binding GroupRunOptions}"
                 FontSize="{ThemeResource FontSizeH3}"
                 FontWeight="SemiBold"
@@ -203,33 +221,9 @@
                       AutomationProperties.Name="{Binding TerminalPreviewText}"
                       AutomationProperties.AutomationId="TerminalFontPreview" />
 
-            <!-- AI 配置：Key 仅进入 PasswordVault，不通过绑定回显。 -->
-            <TextBlock Text="{Binding GroupAi}" FontSize="{ThemeResource FontSizeH3}"
-                       FontWeight="SemiBold" Foreground="{ThemeResource TextTitleBrush}" Margin="0,8,0,0" />
-            <TextBlock Text="{Binding AiPrivacyText}" TextWrapping="Wrap"
-                       Foreground="{ThemeResource TextMutedBrush}" />
-            <CheckBox Content="{Binding AiEnabledText}" IsChecked="{Binding AiEnabled, Mode=TwoWay}"
-                      AutomationProperties.AutomationId="AiEnabledCheckBox" />
-            <ComboBox Header="{Binding AiProviderText}" ItemsSource="{Binding AiProviders}"
-                      SelectedItem="{Binding SelectedAiProvider, Mode=TwoWay}"
-                      HorizontalAlignment="Stretch" AutomationProperties.AutomationId="AiProviderCombo" />
-            <TextBox Header="{Binding AiEndpointText}" Text="{Binding AiEndpointDraft, Mode=TwoWay}"
-                     HorizontalAlignment="Stretch" AutomationProperties.AutomationId="AiEndpointTextBox" />
-            <TextBox Header="{Binding AiModelText}" Text="{Binding AiModelDraft, Mode=TwoWay}"
-                     HorizontalAlignment="Stretch" AutomationProperties.AutomationId="AiModelTextBox" />
-            <PasswordBox x:Name="AiKeyBox" Header="{Binding AiKeyText}" PasswordChanged="OnAiKeyPasswordChanged"
-                         AutomationProperties.AutomationId="AiKeyPasswordBox" />
-            <StackPanel Orientation="Horizontal" Spacing="8">
-                <Button Content="{Binding AiSaveText}" Click="OnSaveAiClick" />
-                <Button Content="{Binding AiTestText}" Click="OnTestAiClick"
-                        IsEnabled="{Binding IsTestingAi, Converter={StaticResource InvertBool}}" />
-                <Button Content="{Binding AiDeleteKeyText}" Click="OnDeleteAiKeyClick" />
-            </StackPanel>
-            <TextBlock Text="{Binding AiStatusText}" TextWrapping="Wrap"
-                       Foreground="{ThemeResource TextMutedBrush}" />
-
             <!-- ==== 语言（切换即时生效） ==== -->
             <TextBlock
+                x:Name="LanguageGroupTitle"
                 Text="{Binding GroupLanguage}"
                 FontSize="{ThemeResource FontSizeH3}"
                 FontWeight="SemiBold"
@@ -251,4 +245,5 @@
                 Visibility="{Binding ErrorMessage, Converter={StaticResource NonEmptyToVisibility}}" />
         </StackPanel>
     </ScrollViewer>
+    </Grid>
 </ContentDialog>

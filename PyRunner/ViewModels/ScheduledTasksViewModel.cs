@@ -17,6 +17,10 @@ public sealed class ScheduledTaskItemViewModel
     public string RunNowText { get; init; } = string.Empty;
     public string EditText { get; init; } = string.Empty;
     public string DeleteText { get; init; } = string.Empty;
+    public string EnableText { get; init; } = string.Empty;
+    public string MoreText { get; init; } = string.Empty;
+    public string DiagnosticText { get; init; } = string.Empty;
+    public string HistoryText { get; init; } = string.Empty;
     public bool Enabled { get => Task.Enabled; set => Task.Enabled = value; }
     public bool CanEnable => Task.ScriptId != null;
 }
@@ -35,6 +39,11 @@ public sealed partial class ScheduledTasksViewModel : ObservableObject
 
     public ObservableCollection<ScheduledTaskItemViewModel> Items { get; } = new();
     [ObservableProperty] private bool _showEmptyState;
+    [ObservableProperty] private bool _hasLoadError;
+    public string LoadErrorText => _localization["List_LoadError"];
+    public string RetryText => _localization["Button_Retry"];
+    public string ScopeText => _localization["Schedule_Scope"];
+    public string OperationErrorText => _localization["Schedule_OperationError"];
 
     public string TitleText => _localization["Schedule_Title"];
     public string AddText => _localization["Schedule_Add"];
@@ -50,9 +59,10 @@ public sealed partial class ScheduledTasksViewModel : ObservableObject
     public void Load()
     {
         Items.Clear();
+        HasLoadError = false;
         IReadOnlyList<ScheduledTask> tasks;
         try { tasks = _tasks.GetAll(); }
-        catch { tasks = Array.Empty<ScheduledTask>(); }
+        catch { tasks = Array.Empty<ScheduledTask>(); HasLoadError = true; }
         foreach (var task in tasks)
         {
             Items.Add(new ScheduledTaskItemViewModel
@@ -64,9 +74,14 @@ public sealed partial class ScheduledTasksViewModel : ObservableObject
                 RunNowText = RunNowText,
                 EditText = EditText,
                 DeleteText = DeleteText,
+                HistoryText = _localization["Nav_Runs"],
+                EnableText = string.Format(_localization["Schedule_EnableTask"], task.Name),
+                MoreText = string.Format(_localization["Schedule_MoreTask"], task.Name),
+                DiagnosticText = string.Join(" · ", new[] { FormatTime(task.LastRunAtUtc),
+                    string.IsNullOrEmpty(task.LastErrorKey) ? FormatResult(task.LastResult) : _localization[task.LastErrorKey] }),
             });
         }
-        ShowEmptyState = Items.Count == 0;
+        ShowEmptyState = Items.Count == 0 && !HasLoadError;
     }
 
     private string FormatRule(ScheduledTask task)
@@ -101,6 +116,7 @@ public sealed partial class ScheduledTasksViewModel : ObservableObject
         OnPropertyChanged(nameof(TitleText)); OnPropertyChanged(nameof(AddText)); OnPropertyChanged(nameof(EmptyText));
         OnPropertyChanged(nameof(ScriptHeaderText)); OnPropertyChanged(nameof(RuleHeaderText)); OnPropertyChanged(nameof(NextHeaderText));
         OnPropertyChanged(nameof(ResultHeaderText)); OnPropertyChanged(nameof(RunNowText)); OnPropertyChanged(nameof(EditText)); OnPropertyChanged(nameof(DeleteText));
+        OnPropertyChanged(nameof(LoadErrorText)); OnPropertyChanged(nameof(RetryText)); OnPropertyChanged(nameof(ScopeText));
         Load();
     }
     public void DetachLocalization() => _localization.LanguageChanged -= OnLanguageChanged;

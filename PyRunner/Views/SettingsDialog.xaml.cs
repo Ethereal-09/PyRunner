@@ -64,7 +64,15 @@ public sealed partial class SettingsDialog : ContentDialog
 
     private void OnDialogClosing(ContentDialog sender, ContentDialogClosingEventArgs args)
     {
-        if (args.Result == ContentDialogResult.Primary) ViewModel.CommitTerminalAppearance();
+        if (args.Result == ContentDialogResult.Primary)
+        {
+            if (!ViewModel.CommitRunOptions())
+            {
+                args.Cancel = true;
+                return;
+            }
+            ViewModel.CommitTerminalAppearance();
+        }
         else ViewModel.CancelTerminalAppearance();
         ViewModel.TerminalFontSizePreviewChanged -= OnTerminalFontSizePreviewChanged;
         try { TerminalPreviewWebView.Close(); } catch { }
@@ -168,26 +176,32 @@ public sealed partial class SettingsDialog : ContentDialog
     private void OnLanguageSelectionChanged(object sender, SelectionChangedEventArgs e) =>
         ViewModel.ApplyLanguageSelection();
 
-    private void OnAiKeyPasswordChanged(object sender, RoutedEventArgs e) =>
-        ViewModel.AiKeyDraft = AiKeyBox.Password;
-
-    private void OnSaveAiClick(object sender, RoutedEventArgs e)
+    private void OnSectionNavigationClick(object sender, RoutedEventArgs e)
     {
-        ViewModel.SaveAiConfiguration();
-        AiKeyBox.Password = string.Empty;
+        if (sender is not FrameworkElement element) return;
+        FrameworkElement target = (element.Tag as string) switch
+        {
+            "paths" => ScriptPathsGroupTitle,
+            "interpreters" => InterpretersGroupTitle,
+            "run" => RunOptionsGroupTitle,
+            "language" => LanguageGroupTitle,
+            _ => ScriptPathsGroupTitle,
+        };
+        try
+        {
+            var point = target.TransformToVisual(SettingsScroller).TransformPoint(new Windows.Foundation.Point());
+            SettingsScroller.ChangeView(null, point.Y + SettingsScroller.VerticalOffset, null, disableAnimation: true);
+        }
+        catch (InvalidOperationException) { }
     }
 
-    private async void OnTestAiClick(object sender, RoutedEventArgs e)
-    {
-        await ViewModel.TestAiConnectionAsync();
-        AiKeyBox.Password = string.Empty;
-    }
 
-    private void OnDeleteAiKeyClick(object sender, RoutedEventArgs e)
-    {
-        ViewModel.DeleteAiCredential();
-        AiKeyBox.Password = string.Empty;
-    }
+
+
+
+
+
+
 
     private void InitPickerWithOwner(object picker)
     {

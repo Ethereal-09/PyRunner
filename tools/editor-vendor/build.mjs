@@ -21,4 +21,8 @@ await writeFile(output, generated.replace(/[ \t]+$/gm, ""));
 const bytes = await readFile(output);
 const sha256 = createHash("sha256").update(bytes).digest("hex").toUpperCase();
 await writeFile(resolve(root, "PyRunner/Editor/wwwroot/codemirror.bundle.sha256"), `${sha256}  codemirror.bundle.js\n`);
+const manifestPath = resolve(root, "PyRunner/Editor/wwwroot/vendor-manifest.json");
+const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
+manifest.bundleSha256 = sha256;
+await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
 console.log(`${bytes.length} bytes ${sha256}`);

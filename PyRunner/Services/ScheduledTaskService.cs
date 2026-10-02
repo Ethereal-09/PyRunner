@@ -15,7 +15,7 @@ public interface IScheduledTaskService
     void Delete(int id);
     void SetEnabled(int id, bool enabled);
     void AdvanceAfterTrigger(ScheduledTask task, DateTimeOffset utcNow);
-    void SetLastResult(int id, string result);
+    void SetLastResult(int id, string result, string? errorKey = null);
 }
 
 public sealed class ScheduledTaskService : IScheduledTaskService
@@ -105,7 +105,7 @@ public sealed class ScheduledTaskService : IScheduledTaskService
         var isOnce = task.ScheduleType == ScheduleTypes.Once;
         var next = isOnce ? null : ScheduleCalculator.GetNextUtc(task, utcNow.AddMilliseconds(1));
         using var connection = _connectionFactory.CreateOpenConnection();
-        connection.Execute(@"UPDATE ScheduledTask SET LastRunAtUtc=@Now,LastResult='running',
+        connection.Execute(@"UPDATE ScheduledTask SET LastRunAtUtc=@Now,LastResult='running',LastErrorKey=NULL,
             NextRunAtUtc=@Next,Enabled=@Enabled,UpdatedAt=@Now WHERE Id=@Id;", new
         {
             task.Id,
@@ -115,11 +115,11 @@ public sealed class ScheduledTaskService : IScheduledTaskService
         });
     }
 
-    public void SetLastResult(int id, string result)
+    public void SetLastResult(int id, string result, string? errorKey = null)
     {
         using var connection = _connectionFactory.CreateOpenConnection();
-        connection.Execute("UPDATE ScheduledTask SET LastResult=@Result,UpdatedAt=@Now WHERE Id=@Id;",
-            new { Id = id, Result = result, Now = TimeFormat.UtcNowIso() });
+        connection.Execute("UPDATE ScheduledTask SET LastResult=@Result,LastErrorKey=@ErrorKey,UpdatedAt=@Now WHERE Id=@Id;",
+            new { Id = id, Result = result, ErrorKey = errorKey, Now = TimeFormat.UtcNowIso() });
     }
 
     private void RepairDetachedScriptLinks()
@@ -148,7 +148,7 @@ public sealed class ScheduledTaskService : IScheduledTaskService
     private static string ToIso(DateTimeOffset value) => value.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture);
 
     private const string SelectSql = @"SELECT Id,Name,ScriptId,ScriptName,ScriptPath,ScheduleType,StartAtLocal,
-        DaysOfWeek,IntervalMinutes,NextRunAtUtc,LastRunAtUtc,LastResult,Enabled,CreatedAt,UpdatedAt FROM ScheduledTask";
+        DaysOfWeek,IntervalMinutes,NextRunAtUtc,LastRunAtUtc,LastResult,LastErrorKey,Enabled,CreatedAt,UpdatedAt FROM ScheduledTask";
 }
 
 public static class ScheduleCalculator

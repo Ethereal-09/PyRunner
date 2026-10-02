@@ -8,6 +8,9 @@ public sealed class AppSettings
     /// <summary>侧栏宽度（px），默认 290。</summary>
     public int SidebarWidth { get; set; } = 290;
 
+    /// <summary>用户主动折叠脚本库；窄窗口的临时折叠不写回此值。</summary>
+    public bool SidebarCollapsed { get; set; }
+
     /// <summary>主界面布局版本；升级时可一次性迁移旧版测试/设计阶段留下的尺寸。</summary>
     public int UiLayoutVersion { get; set; }
 
@@ -26,7 +29,7 @@ public sealed class AppSettings
     /// <summary>运行结束后自动清空终端输出。</summary>
     public bool TerminalAutoClear { get; set; }
 
-    /// <summary>脚本失败时弹窗提醒。</summary>
+    /// <summary>脚本失败时显示可关闭的页面提醒，不阻塞终端操作。</summary>
     public bool NotifyOnFail { get; set; } = true;
 
     /// <summary>输出实时刷新（关闭则结束后一次性输出）。</summary>
@@ -53,10 +56,4 @@ public sealed class AppSettings
     /// <summary>最后一次成功解析的GitHub Release；失败请求不得覆盖。</summary>
     public UpdateCheckCache? LastSuccessfulUpdateCheck { get; set; }
 
-    /// <summary>AI 非敏感配置；API Key 始终存放于 Windows Credential Locker。</summary>
-    public bool AiEnabled { get; set; }
-    public string AiProvider { get; set; } = "OpenAI";
-    public string AiEndpoint { get; set; } = "https://api.openai.com/v1/";
-    public string AiModel { get; set; } = "gpt-5-mini";
-    public int AiTimeoutSeconds { get; set; } = 90;
 }

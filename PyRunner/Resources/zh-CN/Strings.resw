@@ -145,7 +145,7 @@
     <value>前端加载中…</value>
   </data>
   <data name="Status_Connected" xml:space="preserve">
-    <value>ConPTY 已连接</value>
+    <value>脚本运行中</value>
   </data>
   <data name="Status_ProcessExited" xml:space="preserve">
     <value>进程已退出（code={0}）</value>
@@ -296,7 +296,7 @@
     <value>运行结束后自动清空输出</value>
   </data>
   <data name="Settings_Opt_NotifyOnFail" xml:space="preserve">
-    <value>脚本失败时弹窗提醒</value>
+    <value>脚本失败时显示提醒</value>
   </data>
   <data name="Settings_Opt_LiveFlush" xml:space="preserve">
     <value>输出实时刷新</value>
@@ -371,9 +371,9 @@
   <data name="Notify_Download" xml:space="preserve">
     <value>下载</value>
   </data>
-  <data name="Notify_RunFailed" xml:space="preserve">
-    <value>脚本“{0}”异常退出，请查看终端输出或运行历史了解详情。</value>
-  </data>
+  <data name="Notify_RunExited_Title" xml:space="preserve"><value>脚本执行已结束</value></data>
+  <data name="Notify_RunExited" xml:space="preserve"><value>脚本“{0}”已退出，退出码为 {1}，未报告成功。请查看终端输出或运行历史了解详情。</value></data>
+  <data name="Notify_RunStartFailed" xml:space="preserve"><value>脚本“{0}”未能启动。请检查终端中的启动错误和解释器配置。</value></data>
   <data name="Terminal_ProcessExited" xml:space="preserve">
     <value>进程已退出，代码={0}</value>
   </data>
@@ -384,12 +384,11 @@
     <value>脚本</value>
   </data>
   <data name="Nav_Runs" xml:space="preserve">
-    <value>运行</value>
+    <value>运行历史</value>
   </data>
   <data name="Nav_Settings" xml:space="preserve">
     <value>设置</value>
   </data>
-  <data name="Nav_AI" xml:space="preserve"><value>AI</value></data>
   <data name="Sidebar_ResourceManager" xml:space="preserve">
     <value>· 资源管理器</value>
   </data>
@@ -691,67 +690,6 @@
   <data name="Schedule_Error_IntervalInvalid" xml:space="preserve"><value>执行间隔不能小于一分钟。</value></data>
   <data name="Weekday_Sun" xml:space="preserve"><value>周日</value></data><data name="Weekday_Mon" xml:space="preserve"><value>周一</value></data><data name="Weekday_Tue" xml:space="preserve"><value>周二</value></data><data name="Weekday_Wed" xml:space="preserve"><value>周三</value></data><data name="Weekday_Thu" xml:space="preserve"><value>周四</value></data><data name="Weekday_Fri" xml:space="preserve"><value>周五</value></data><data name="Weekday_Sat" xml:space="preserve"><value>周六</value></data>
   <data name="Button_Copy" xml:space="preserve"><value>复制</value></data>
-  <data name="Dependency_Title" xml:space="preserve"><value>Python 依赖</value></data>
-  <data name="Dependency_NetworkNotice" xml:space="preserve"><value>检测可能访问软件包索引以读取依赖元数据。</value></data>
-  <data name="Dependency_RequirementsLabel" xml:space="preserve"><value>依赖文件</value></data>
-  <data name="Dependency_InterpreterLabel" xml:space="preserve"><value>解释器</value></data>
-  <data name="Dependency_Check" xml:space="preserve"><value>检测依赖</value></data>
-  <data name="Dependency_Recheck" xml:space="preserve"><value>重新检测</value></data>
-  <data name="Dependency_Install" xml:space="preserve"><value>安装依赖</value></data>
-  <data name="Dependency_Details" xml:space="preserve"><value>进程详情</value></data>
-  <data name="Dependency_Compatibility" xml:space="preserve"><value>环境兼容性</value></data>
-  <data name="Dependency_Risks" xml:space="preserve"><value>来源风险</value></data>
-  <data name="Dependency_Status_NoContext" xml:space="preserve"><value>请选择脚本和 Python 解释器</value></data>
-  <data name="Dependency_Status_NotChecked" xml:space="preserve"><value>尚未检测依赖</value></data>
-  <data name="Dependency_Status_NoFile" xml:space="preserve"><value>未发现 requirements.txt</value></data>
-  <data name="Dependency_Status_Checking" xml:space="preserve"><value>正在检测依赖…</value></data>
-  <data name="Dependency_Status_ConfirmationRequired" xml:space="preserve"><value>高级依赖来源需要额外确认</value></data>
-  <data name="Dependency_Status_ConfirmationDeclined" xml:space="preserve"><value>未启动依赖检测</value></data>
-  <data name="Dependency_Status_Satisfied" xml:space="preserve"><value>当前环境已满足全部依赖</value></data>
-  <data name="Dependency_Status_Changes" xml:space="preserve"><value>发现 {0} 项需要安装或调整</value></data>
-  <data name="Dependency_Status_Cancelled" xml:space="preserve"><value>依赖操作已取消，旧结果不能用于安装</value></data>
-  <data name="Dependency_Status_Confirming" xml:space="preserve"><value>等待安装确认</value></data>
-  <data name="Dependency_Status_Installing" xml:space="preserve"><value>正在安装依赖…</value></data>
-  <data name="Dependency_Status_InstallDeclined" xml:space="preserve"><value>已在启动 pip 前取消安装</value></data>
-  <data name="Dependency_Status_InstallSucceeded" xml:space="preserve"><value>依赖安装并重新检测成功</value></data>
-  <data name="Dependency_Status_InstallSucceededWithConflicts" xml:space="preserve"><value>安装完成，但 pip check 报告了环境冲突</value></data>
-  <data name="Dependency_Status_InstallFailed" xml:space="preserve"><value>安装未完成，Python 环境可能已经变化</value></data>
-  <data name="Dependency_Status_Failed" xml:space="preserve"><value>依赖检测失败</value></data>
-  <data name="Dependency_Status_Expired" xml:space="preserve"><value>requirements.txt 已变化，请重新检测</value></data>
-  <data name="Dependency_Error_ScriptMissing" xml:space="preserve"><value>所选脚本不可用。</value></data>
-  <data name="Dependency_Error_InterpreterMissing" xml:space="preserve"><value>所选 Python 解释器不可用。</value></data>
-  <data name="Dependency_Error_ProcessStart" xml:space="preserve"><value>无法启动 Python。</value></data>
-  <data name="Dependency_Error_PipUnavailable" xml:space="preserve"><value>当前 Python 环境未安装 pip。</value></data>
-  <data name="Dependency_Error_PipList" xml:space="preserve"><value>无法从 pip 读取已安装软件包。</value></data>
-  <data name="Dependency_Error_CheckFailed" xml:space="preserve"><value>pip 无法解析 requirements.txt。</value></data>
-  <data name="Dependency_Error_TemporaryDirectory" xml:space="preserve"><value>受保护的临时报告目录不可用。</value></data>
-  <data name="Dependency_Error_ReportInvalid" xml:space="preserve"><value>pip 返回了无效或过大的依赖报告。</value></data>
-  <data name="Dependency_Error_ContextChanged" xml:space="preserve"><value>脚本、解释器或依赖文件已变化，请重新检测。</value></data>
-  <data name="Dependency_Error_Timeout" xml:space="preserve"><value>依赖操作已超时。</value></data>
-  <data name="Dependency_Error_PolicyBlocked" xml:space="preserve"><value>不安全或不支持的依赖来源已阻止此操作。</value></data>
-  <data name="Dependency_Error_ResultInvalid" xml:space="preserve"><value>安装前必须具有当前有效的依赖检测结果。</value></data>
-  <data name="Dependency_Error_InterpreterBusy" xml:space="preserve"><value>此 Python 环境正在运行脚本，请先停止后再安装。</value></data>
-  <data name="Dependency_Error_PipCheck" xml:space="preserve"><value>pip check 无法验证环境兼容性。</value></data>
-  <data name="Dependency_Error_RecheckFailed" xml:space="preserve"><value>安装后仍有依赖未满足，请查看重新检测结果。</value></data>
-  <data name="Dependency_Risk_RecursiveDepth" xml:space="preserve"><value>递归依赖文件超过八层限制</value></data>
-  <data name="Dependency_Risk_PathBlocked" xml:space="preserve"><value>本地依赖路径不存在或超出脚本目录</value></data>
-  <data name="Dependency_Risk_ReparsePoint" xml:space="preserve"><value>一键安装不允许符号链接或目录联接</value></data>
-  <data name="Dependency_Risk_RecursiveCycle" xml:space="preserve"><value>递归依赖文件存在循环引用</value></data>
-  <data name="Dependency_Risk_RemoteInclude" xml:space="preserve"><value>不允许远程 requirements 或约束文件</value></data>
-  <data name="Dependency_Risk_TrustedHost" xml:space="preserve"><value>trusted-host 会弱化传输校验，已阻止</value></data>
-  <data name="Dependency_Risk_ExternalSource" xml:space="preserve"><value>外部软件包来源需要额外确认</value></data>
-  <data name="Dependency_Risk_Editable" xml:space="preserve"><value>可编辑安装可能持续关联本地源码</value></data>
-  <data name="Dependency_Risk_InsecureSource" xml:space="preserve"><value>非 HTTPS 或格式异常的外部来源已阻止</value></data>
-  <data name="Dependency_Risk_LocalSource" xml:space="preserve"><value>本地软件包来源需要额外确认</value></data>
-  <data name="Dependency_Risk_UnsupportedOption" xml:space="preserve"><value>不支持的 requirements 选项已阻止</value></data>
-  <data name="Dependency_InspectConfirmTitle" xml:space="preserve"><value>检测高级依赖来源？</value></data>
-  <data name="Dependency_InspectConfirmBody" xml:space="preserve"><value>pip 可能访问以下来源，并可能在准备元数据时运行构建后端。仅在信任来源时继续。</value></data>
-  <data name="Dependency_InstallConfirmTitle" xml:space="preserve"><value>安装 Python 依赖？</value></data>
-  <data name="Dependency_InstallConfirmBody" xml:space="preserve"><value>解释器：{0}&#x0A;路径：{1}&#x0A;依赖文件：{2}&#x0A;计划变更：{3} 项&#x0A;&#x0A;命令：python.exe -m pip install --disable-pip-version-check --no-input -r requirements.txt</value></data>
-  <data name="Dependency_InstallCodeRisk" xml:space="preserve"><value>安装 Python 包可能从互联网下载内容，并执行第三方构建或安装代码。</value></data>
-  <data name="Dependency_Item_Missing" xml:space="preserve"><value>缺失</value></data>
-  <data name="Dependency_Item_VersionMismatch" xml:space="preserve"><value>版本调整</value></data>
-  <data name="Run_DependencyInstallInProgress" xml:space="preserve"><value>此 Python 环境正在安装依赖，请等待安装完成。</value></data>
   <data name="Button_Continue" xml:space="preserve"><value>继续</value></data>
   <data name="Workspace_Terminal" xml:space="preserve"><value>终端</value></data>
   <data name="Workspace_Code" xml:space="preserve"><value>代码</value></data>
@@ -814,107 +752,42 @@
   <data name="Settings_TerminalPreview" xml:space="preserve"><value>预览</value></data>
   <data name="Metrics_Summary" xml:space="preserve"><value>{0} · Job 峰值提交 {1}</value></data>
   <data name="Metrics_Unavailable" xml:space="preserve"><value>指标不可用</value></data>
-+  <data name="AI_Settings_Group" xml:space="preserve"><value>AI 代码助手</value></data>
-  <data name="AI_Page_Title" xml:space="preserve"><value>AI 代码助手</value></data>
-  <data name="AI_Page_Subtitle" xml:space="preserve"><value>围绕当前脚本持续对话，修改在确认后才会写入文件。</value></data>
-  <data name="AI_History" xml:space="preserve"><value>历史记录</value></data>
-  <data name="AI_NewConversation" xml:space="preserve"><value>新对话</value></data>
-  <data name="AI_ConversationPlaceholder" xml:space="preserve"><value>继续提问，或描述你想修改的内容…</value></data>
-  <data name="AI_AddContext" xml:space="preserve"><value>添加上下文</value></data>
-  <data name="AI_RemoveContext" xml:space="preserve"><value>移除上下文文件</value></data>
-  <data name="AI_ContextSummary" xml:space="preserve"><value>{0} 个文件 · {1:0.#} KB</value></data>
-  <data name="AI_ApplyChanges" xml:space="preserve"><value>应用修改</value></data>
-  <data name="AI_ViewDiff" xml:space="preserve"><value>查看差异</value></data>
-  <data name="AI_DiscardChanges" xml:space="preserve"><value>放弃修改</value></data>
-  <data name="AI_DeleteConversation" xml:space="preserve"><value>删除</value></data>
-  <data name="AI_OpenConversation" xml:space="preserve"><value>打开</value></data>
-  <data name="AI_Copy" xml:space="preserve"><value>复制</value></data>
-  <data name="AI_Retry" xml:space="preserve"><value>重试</value></data>
-  <data name="AI_CodeFileFallback" xml:space="preserve"><value>脚本.py</value></data>
-  <data name="AI_Error_AmbiguousContextNames" xml:space="preserve"><value>生成修改模式下不能同时使用同名文件。</value></data>
-  <data name="AI_EmptyTitle" xml:space="preserve"><value>想对当前脚本做什么？</value></data>
-  <data name="AI_EmptyDescription" xml:space="preserve"><value>可选择快捷提示词，也可在下方输入自己的问题；确认发送预览前，文件内容不会离开本机。</value></data>
-  <data name="AI_Mode_ReadOnly" xml:space="preserve"><value>只读分析</value></data>
-  <data name="AI_Mode_Generate" xml:space="preserve"><value>生成修改</value></data>
-  <data name="AI_ProposalTitle" xml:space="preserve"><value>建议修改 {0} 个文件</value></data>
-  <data name="AI_ProposalStats" xml:space="preserve"><value>新增 {0} 行 · 删除 {1} 行</value></data>
-  <data name="AI_Quick_Explain" xml:space="preserve"><value>解释这个脚本的用途和主要控制流程。</value></data>
-  <data name="AI_Quick_Diagnose" xml:space="preserve"><value>检查这个脚本可能存在的问题，并说明修复方案。</value></data>
-  <data name="AI_Quick_Optimize" xml:space="preserve"><value>在不改变行为的前提下，提出可读性和性能改进建议。</value></data>
-  <data name="AI_Quick_Refactor" xml:space="preserve"><value>在保持现有行为的前提下重构这个脚本。</value></data>
-  <data name="AI_Quick_Generate" xml:space="preserve"><value>帮我按照接下来描述的要求修改这个脚本。</value></data>
-  <data name="AI_DeleteConversationTitle" xml:space="preserve"><value>删除对话？</value></data>
-  <data name="AI_DeleteConversationBody" xml:space="preserve"><value>“{0}”将从本地历史中删除，此操作无法撤销。</value></data>
-  <data name="AI_UntitledConversation" xml:space="preserve"><value>未命名对话</value></data>
   <data name="Button_Close" xml:space="preserve"><value>关闭</value></data>
-  <data name="AI_Settings_Privacy" xml:space="preserve"><value>代码仅在确认后直接发送给所选提供商，服务可能按用量收费。PyRunner 不转发请求，也不保存提示词和响应。</value></data>
-  <data name="AI_Settings_Enabled" xml:space="preserve"><value>启用 AI 功能</value></data>
-  <data name="AI_Settings_Provider" xml:space="preserve"><value>提供商</value></data>
-  <data name="AI_Settings_Endpoint" xml:space="preserve"><value>API 基础地址</value></data>
-  <data name="AI_Settings_Model" xml:space="preserve"><value>模型标识</value></data>
-  <data name="AI_Settings_Key" xml:space="preserve"><value>API Key（存入 Windows 凭据保险箱，永不回显）</value></data>
-  <data name="AI_Settings_Save" xml:space="preserve"><value>保存 AI 设置</value></data>
-  <data name="AI_Settings_DeleteKey" xml:space="preserve"><value>删除 Key</value></data>
-  <data name="AI_Settings_Test" xml:space="preserve"><value>测试连接</value></data>
-  <data name="AI_Settings_Saved" xml:space="preserve"><value>AI 设置已保存。</value></data>
-  <data name="AI_Settings_KeyDeleted" xml:space="preserve"><value>凭据已删除。</value></data>
-  <data name="AI_Settings_Testing" xml:space="preserve"><value>正在发送最小测试请求；提供商可能计费…</value></data>
-  <data name="AI_Settings_TestSucceeded" xml:space="preserve"><value>连接测试成功。</value></data>
-  <data name="AI_Explain" xml:space="preserve"><value>解释</value></data>
-  <data name="AI_Refactor" xml:space="preserve"><value>重构</value></data>
-  <data name="AI_Optimize" xml:space="preserve"><value>优化</value></data>
-  <data name="AI_Diagnose" xml:space="preserve"><value>查错</value></data>
-  <data name="AI_Generate" xml:space="preserve"><value>写脚本</value></data>
-  <data name="AI_Stop" xml:space="preserve"><value>停止</value></data>
-  <data name="AI_Send" xml:space="preserve"><value>发送</value></data>
-  <data name="AI_Apply" xml:space="preserve"><value>应用到未保存缓冲区</value></data>
-  <data name="AI_PromptPlaceholder" xml:space="preserve"><value>可选目标、错误文本或脚本需求</value></data>
-  <data name="AI_OutputWarning" xml:space="preserve"><value>AI 生成内容可能不正确，请在保存或运行前检查。</value></data>
-  <data name="AI_SendPreviewTitle" xml:space="preserve"><value>向 AI 提供商发送代码？</value></data>
-  <data name="AI_SendPreviewBody" xml:space="preserve"><value>Host：{0}&#x0A;模型：{1}&#x0A;范围：{2}&#x0A;字符数：{3}&#x0A;估算 token：{4}&#x0A;敏感信息命中：{5}&#x0A;&#x0A;提供商可能对此请求计费。</value></data>
-  <data name="AI_SecretWarning" xml:space="preserve"><value>检测到可能的敏感信息。预览已遮罩；除非明确希望发送原文，否则请返回移除。</value></data>
-  <data name="AI_ApplyTitle" xml:space="preserve"><value>应用 AI 候选代码？</value></data>
-  <data name="AI_Status_Idle" xml:space="preserve"><value>Enter 发送 · Shift+Enter 换行 · Esc 停止</value></data>
-  <data name="AI_Status_AwaitingConfirmation" xml:space="preserve"><value>请检查本次发送的准确范围。</value></data>
-  <data name="AI_Status_Streaming" xml:space="preserve"><value>正在接收响应…</value></data>
-  <data name="AI_Status_ReadingFiles" xml:space="preserve"><value>正在读取并分析已确认的 {0} 个文件…</value></data>
-  <data name="AI_Status_Completed" xml:space="preserve"><value>响应已完成。</value></data>
-  <data name="AI_Status_Reviewable" xml:space="preserve"><value>候选结果可审查，尚未应用。</value></data>
-  <data name="AI_Status_Cancelled" xml:space="preserve"><value>请求已取消；不完整输出不能应用。</value></data>
-  <data name="AI_Status_AppliedToBuffer" xml:space="preserve"><value>已应用到未保存编辑缓冲区；保存和运行仍是独立操作。</value></data>
-  <data name="AI_Status_AppliedWithBackup" xml:space="preserve"><value>修改已安全应用，并已创建可恢复的本地备份。</value></data>
-  <data name="AI_Status_ProposalDiscarded" xml:space="preserve"><value>已放弃本次修改提案。</value></data>
-  <data name="AI_Status_GeneratedDraft" xml:space="preserve"><value>生成脚本已作为未保存草稿打开。</value></data>
-  <data name="AI_GeneratedDraftName" xml:space="preserve"><value>生成脚本（未保存）</value></data>
-  <data name="AI_UntitledScript" xml:space="preserve"><value>生成脚本（未保存）</value></data>
-  <data name="AI_Usage" xml:space="preserve"><value>输入 token：{0}；输出 token：{1}</value></data>
-  <data name="AI_RetryAfter" xml:space="preserve"><value>约 {0} 秒后可重试。</value></data>
-  <data name="AI_RequestId" xml:space="preserve"><value>请求 ID：{0}</value></data>
-  <data name="AI_Error_Disabled" xml:space="preserve"><value>请先在设置中启用并配置 AI。</value></data>
-  <data name="AI_Error_MissingCredential" xml:space="preserve"><value>当前提供商与 Host 没有保存 API Key。</value></data>
-  <data name="AI_Error_InvalidCredential" xml:space="preserve"><value>API Key 为空或过长。</value></data>
-  <data name="AI_Error_InvalidEndpoint" xml:space="preserve"><value>请输入符合策略的 API 基础地址。</value></data>
-  <data name="AI_Error_HttpsRequired" xml:space="preserve"><value>AI 地址必须使用 HTTPS。</value></data>
-  <data name="AI_Error_InvalidModel" xml:space="preserve"><value>请输入有效的模型标识。</value></data>
-  <data name="AI_Error_PromptRequired" xml:space="preserve"><value>请描述要创建的脚本。</value></data>
-  <data name="AI_Error_NoContext" xml:space="preserve"><value>请先选择或打开 Python 脚本。</value></data>
-  <data name="AI_Error_Unauthorized" xml:space="preserve"><value>API Key 无效或没有该模型权限。</value></data>
-  <data name="AI_Error_RateLimited" xml:space="preserve"><value>请求受到服务限额限制，未自动重试。</value></data>
-  <data name="AI_Error_Server" xml:space="preserve"><value>提供商返回服务器错误，可按需手动重试。</value></data>
-  <data name="AI_Error_Network" xml:space="preserve"><value>与提供商的安全连接失败。</value></data>
-  <data name="AI_Error_Timeout" xml:space="preserve"><value>AI 请求超时。</value></data>
-  <data name="AI_Error_Cancelled" xml:space="preserve"><value>AI 请求已取消。</value></data>
-  <data name="AI_Error_ResponseTooLarge" xml:space="preserve"><value>提供商响应超过本地大小上限。</value></data>
-  <data name="AI_Error_InvalidResponse" xml:space="preserve"><value>提供商返回无效或不完整的响应。</value></data>
-  <data name="AI_Error_InvalidStructuredResponse" xml:space="preserve"><value>响应中没有安全、可审查的代码候选。</value></data>
-  <data name="AI_Error_RequestFailed" xml:space="preserve"><value>AI 请求失败，未显示请求正文或凭据。</value></data>
-  <data name="AI_Error_Redirect" xml:space="preserve"><value>提供商尝试重定向，请求已阻止。</value></data>
-  <data name="AI_Error_SourceChanged" xml:space="preserve"><value>源选区已经变化，不能直接应用此结果。</value></data>
-  <data name="AI_Error_ContextTooLarge" xml:space="preserve"><value>所选内容过大，请缩小范围。</value></data>
-  <data name="AI_Error_InvalidContextFile" xml:space="preserve"><value>只能添加有效的 Python 上下文文件。</value></data>
-  <data name="AI_Error_ContextLoadFailed" xml:space="preserve"><value>一个或多个上下文文件无法安全读取。</value></data>
-  <data name="AI_Error_InvalidPatch" xml:space="preserve"><value>修改提案指向了无效或未经确认的文件。</value></data>
-  <data name="AI_Error_ApplyFailed" xml:space="preserve"><value>无法应用修改；原文件已保留或恢复。</value></data>
-  <data name="AI_Error_UnsavedEditor" xml:space="preserve"><value>请先保存或放弃编辑器中的修改，再应用 AI Patch。</value></data>
-  <data name="Help_AiPrivacySummary" xml:space="preserve"><value>AI 为可选且默认关闭。仅确认的代码会直发所配置的提供商并可能计费；输出视为不可信内容，绝不会自动运行或保存。</value></data>
+  <data name="Shell_ToggleSidebar" xml:space="preserve"><value>显示或隐藏脚本库</value></data>
+  <data name="Shell_MoreActions" xml:space="preserve"><value>更多操作</value></data>
+  <data name="Shell_Workspaces" xml:space="preserve"><value>工作区</value></data>
+  <data name="Sidebar_ManageLibrary" xml:space="preserve"><value>管理脚本目录和解释器</value></data>
+  <data name="Settings_RunAndTerminal" xml:space="preserve"><value>运行与终端</value></data>
+  <data name="Run_WorkingDirectoryMissing" xml:space="preserve"><value>指定的工作目录不存在。请先修改脚本设置，再运行。</value></data>
+  <data name="Run_Close_Title" xml:space="preserve"><value>有脚本正在运行</value></data>
+  <data name="Run_Close_Content" xml:space="preserve"><value>关闭将停止 {0} 个正在运行的任务及其子进程。是否继续？</value></data>
+  <data name="Run_Close_Confirm" xml:space="preserve"><value>停止任务并关闭</value></data>
+  <data name="Run_Interrupted" xml:space="preserve"><value>异常中断（上次应用未正常退出）</value></data>
+  <data name="App_AlreadyRunning" xml:space="preserve"><value>PyRunner 已经打开，请切换到现有窗口。</value></data>
+  <data name="List_LoadError" xml:space="preserve"><value>加载失败，数据未被删除。请重试。</value></data>
+  <data name="History_Column_Time" xml:space="preserve"><value>开始时间</value></data>
+  <data name="History_Column_Status" xml:space="preserve"><value>状态</value></data>
+  <data name="History_Column_Exit" xml:space="preserve"><value>退出码</value></data>
+  <data name="History_Column_Metrics" xml:space="preserve"><value>耗时 / 内存</value></data>
+  <data name="History_Column_Output" xml:space="preserve"><value>输出摘要</value></data>
+  <data name="History_ContextTitle" xml:space="preserve"><value>{0} · 脚本 #{1}</value></data>
+  <data name="Settings_ImmediateChanges" xml:space="preserve"><value>添加或移除目录、解释器会立即生效，取消不会撤销这些操作。</value></data>
+  <data name="Settings_DraftChanges" xml:space="preserve"><value>运行选项、终端字号和语言在点击确定后生效；取消会丢弃这些修改。</value></data>
+  <data name="Settings_Nav_Paths" xml:space="preserve"><value>目录</value></data>
+  <data name="Settings_Nav_Interpreters" xml:space="preserve"><value>解释器</value></data>
+  <data name="Settings_Nav_Language" xml:space="preserve"><value>语言</value></data>
+  <data name="Settings_RemovePath" xml:space="preserve"><value>移除此目录（不会删除磁盘文件）</value></data>
+  <data name="Settings_RemoveInterpreter" xml:space="preserve"><value>移除此解释器</value></data>
+  <data name="Schedule_Scope" xml:space="preserve"><value>仅在 PyRunner 打开期间执行。休眠错过的重复任务恢复后补触发一次；同一脚本正在运行时跳过本次触发。</value></data>
+  <data name="Schedule_OperationError" xml:space="preserve"><value>操作失败，任务未能更新。请重试。</value></data>
+  <data name="Schedule_EnableTask" xml:space="preserve"><value>启用任务：{0}</value></data>
+  <data name="Schedule_MoreTask" xml:space="preserve"><value>任务操作：{0}</value></data>
+  <data name="Button_Retry" xml:space="preserve"><value>重试</value></data>
+  <data name="DeleteFile_Content" xml:space="preserve"><value>将以下脚本文件移入回收站？&#x0A;{0}&#x0A;&#x0A;删除后会移除脚本登记及运行历史，并停用关联定时任务。可从回收站恢复文件。</value></data>
+  <data name="Menu_DeleteFile" xml:space="preserve"><value>删除脚本</value></data>
+  <data name="DeleteFile_Running" xml:space="preserve"><value>该脚本正在运行，请先停止后再删除。</value></data>
+  <data name="DeleteFile_InvalidTarget" xml:space="preserve"><value>只能删除已配置脚本目录内的普通 .py 文件，不能删除目录或链接。</value></data>
+  <data name="DeleteFile_Title" xml:space="preserve"><value>删除脚本文件</value></data>
+  <data name="DeleteFile_Failed" xml:space="preserve"><value>未能完成删除，请检查文件是否被占用、权限和回收站是否可用。</value></data>
+  <data name="Status_LastResultFormat" xml:space="preserve"><value>上次结果：{0}</value></data>
 </root>

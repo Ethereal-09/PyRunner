@@ -26,6 +26,15 @@
     catch { return; }
     if (!message || typeof message.type !== 'string' || message.version !== protocolVersion) return;
 
+    if (message.type === 'clearDocument') {
+      editor?.destroy();
+      editor = null;
+      dirty = false;
+      document.getElementById('editor').replaceChildren();
+      send({ type: 'state', version: protocolVersion, dirty, line: 1, column: 1 });
+      return;
+    }
+
     if (message.type === 'loadDocument') {
       if (typeof message.text !== 'string' || message.text.length > maximumTextLength) return;
       editor?.destroy();
@@ -49,23 +58,6 @@
         if (typeof message.requestId === 'string')
           send({ type: 'text', version: protocolVersion, requestId: message.requestId, text: editor.getText() });
         break;
-      case 'requestAiContext': {
-        if (typeof message.requestId !== 'string') break;
-        const context = editor.getAiContext();
-        send({ type: 'aiContext', version: protocolVersion, requestId: message.requestId,
-          text: context.text, selectionStart: context.selectionStart,
-          selectionEnd: context.selectionEnd, isSelection: context.isSelection });
-        break;
-      }
-      case 'applyAiCandidate': {
-        if (typeof message.requestId !== 'string' || typeof message.expected !== 'string' ||
-            typeof message.candidate !== 'string' || !Number.isSafeInteger(message.start) ||
-            !Number.isSafeInteger(message.end)) break;
-        const applied = editor.replaceChecked(message.start, message.end, message.expected, message.candidate);
-        if (applied) dirty = true;
-        send({ type: 'aiApplyResult', version: protocolVersion, requestId: message.requestId, applied });
-        break;
-      }
       case 'markClean': dirty = false; break;
       case 'undo': editor.undo(); break;
       case 'redo': editor.redo(); break;

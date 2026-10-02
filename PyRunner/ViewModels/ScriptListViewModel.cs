@@ -120,6 +120,7 @@ public sealed partial class ScriptListViewModel : ObservableObject
     public string ResourceManagerText => _localization["Sidebar_ResourceManager"];
     public string RefreshText => _localization["Sidebar_Refresh"];
     public string SettingsText => _localization["Settings_Title"];
+    public string LibrarySettingsText => _localization["Sidebar_ManageLibrary"];
     public string SearchPlaceholder => _localization["Sidebar_SearchPlaceholder"];
     public string EmptyText => _localization["Sidebar_Empty_Text"];
     public string OpenSettingsText => _localization["Button_OpenSettings"];
@@ -314,6 +315,7 @@ public sealed partial class ScriptListViewModel : ObservableObject
         OnPropertyChanged(nameof(ResourceManagerText));
         OnPropertyChanged(nameof(RefreshText));
         OnPropertyChanged(nameof(SettingsText));
+        OnPropertyChanged(nameof(LibrarySettingsText));
         OnPropertyChanged(nameof(SearchPlaceholder));
         OnPropertyChanged(nameof(EmptyText));
         OnPropertyChanged(nameof(OpenSettingsText));

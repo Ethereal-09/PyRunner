@@ -2,7 +2,6 @@ using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using PyRunner.Models;
 using PyRunner.Services;
-using PyRunner.Services.AI;
 
 namespace PyRunner.ViewModels;
 
@@ -13,6 +12,7 @@ public sealed class ScriptPathRow
     public string Path { get; init; } = string.Empty;
     public bool IsValid { get; init; }
     public string StatusText { get; init; } = string.Empty;
+    public string RemoveText { get; init; } = string.Empty;
 }
 
 /// <summary>设置弹窗行模型：解释器 + 版本检测状态。</summary>
@@ -22,6 +22,7 @@ public sealed partial class InterpreterRow : ObservableObject
     public string Name { get; init; } = string.Empty;
     public string ExecutablePath { get; init; } = string.Empty;
     public string? Version { get; init; }
+    public string RemoveText { get; init; } = string.Empty;
     // 延后项留痕：默认解释器的 IsDefault UI 呈现（星标/置顶等）登记至 Phase D 任务备忘，本阶段仅透传数据。
     public bool IsDefault { get; init; }
 
@@ -42,7 +43,7 @@ public sealed class LanguageOption
 
 /// <summary>
 /// 设置弹窗 ViewModel（Phase C 交付 9）：四分组——脚本路径 / 解释器 / 运行选项 / 语言。
-/// 所有变更即时持久化：DB 经服务层同步写入，设置项经 JsonSettingsService（防抖 Save）。
+/// 路径与解释器操作即时生效；运行选项、终端字号和语言经确定按钮提交草稿。
 /// 解释器版本检测为同步阻塞（exe --version，3s 超时），由对话框侧 Task.Run 包装为异步。
 /// </summary>
 public sealed partial class SettingsViewModel : ObservableObject
@@ -54,8 +55,6 @@ public sealed partial class SettingsViewModel : ObservableObject
     private readonly IStartupService _startupService;
     private readonly ILocalizationService _localization;
     private readonly ITerminalAppearanceService _terminalAppearance;
-    private readonly IAiCredentialStore _aiCredentials;
-    private readonly IAiProviderClient _aiProviderClient;
 
     public SettingsViewModel(
         ISettingsService settingsService,
@@ -64,9 +63,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         IInterpreterService interpreterService,
         IStartupService startupService,
         ILocalizationService localization,
-        ITerminalAppearanceService terminalAppearance,
-        IAiCredentialStore aiCredentials,
-        IAiProviderClient aiProviderClient)
+        ITerminalAppearanceService terminalAppearance)
     {
         _settingsService = settingsService;
         _scriptPathService = scriptPathService;
@@ -75,15 +72,10 @@ public sealed partial class SettingsViewModel : ObservableObject
         _startupService = startupService;
         _localization = localization;
         _terminalAppearance = terminalAppearance;
-        _aiCredentials = aiCredentials;
-        _aiProviderClient = aiProviderClient;
         _terminalFontSizeDraft = terminalAppearance.FontSize;
 
-        var ai = settingsService.Current;
-        _aiEnabled = ai.AiEnabled;
-        _selectedAiProvider = ai.AiProvider;
-        _aiEndpointDraft = ai.AiEndpoint;
-        _aiModelDraft = ai.AiModel;
+        var snapshot = settingsService.Current;
+        _runOptionsDraft = snapshot;
 
         _localization.LanguageChanged += OnLanguageChanged;
         RefreshLists();
@@ -101,6 +93,38 @@ public sealed partial class SettingsViewModel : ObservableObject
     /// 完整 CTS 取消链路（中断 exe --version 进程）代价较大，延后实施；
     /// 当前仅保证续延开头检查跳过 UI 刷新，DB 写入本身幂等无害。</summary>
     private bool _detached;
+    private readonly AppSettings _runOptionsDraft;
+    public string ImmediateChangesText => _localization["Settings_ImmediateChanges"];
+    public string DraftChangesText => _localization["Settings_DraftChanges"];
+    public string PathsNavText => _localization["Settings_Nav_Paths"];
+    public string InterpretersNavText => _localization["Settings_Nav_Interpreters"];
+    public string LanguageNavText => _localization["Settings_Nav_Language"];
+    public string RemovePathText => _localization["Settings_RemovePath"];
+    public string RemoveInterpreterText => _localization["Settings_RemoveInterpreter"];
+
+    public bool CommitRunOptions()
+    {
+        try
+        {
+            if (_settingsService.Current.AutoStart != AutoStart) _startupService.SetEnabled(AutoStart);
+            _settingsService.Update(settings =>
+            {
+                settings.TerminalAutoClear = TerminalAutoClear;
+                settings.NotifyOnFail = NotifyOnFail;
+                settings.LiveFlush = LiveFlush;
+                settings.AutoStart = AutoStart;
+                settings.AutoRefreshScripts = AutoRefreshScripts;
+            });
+            if (SelectedLanguage is not null) _localization.SetLanguage(SelectedLanguage.Code);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = _localization["Error_AutoStartFailed"];
+            DebugWriteError("Settings: 保存运行设置失败", ex);
+            return false;
+        }
+    }
 
     // ---- 集合 ----
 
@@ -123,6 +147,7 @@ public sealed partial class SettingsViewModel : ObservableObject
     public string GroupInterpreters => _localization["Settings_Interpreters"];
     public string AddInterpreterText => _localization["Settings_AddInterpreter"];
     public string GroupRunOptions => _localization["Settings_RunOptions"];
+    public string RunAndTerminalText => _localization["Settings_RunAndTerminal"];
     public string OptAutoClearText => _localization["Settings_Opt_AutoClear"];
     public string OptNotifyOnFailText => _localization["Settings_Opt_NotifyOnFail"];
     public string OptLiveFlushText => _localization["Settings_Opt_LiveFlush"];
@@ -135,103 +160,6 @@ public sealed partial class SettingsViewModel : ObservableObject
     public string OkText => _localization["Button_OK"];
     public string CancelText => _localization["Button_Cancel"];
     public string ConnectedText => _localization["Settings_Connected"];
-    public string GroupAi => _localization["AI_Settings_Group"];
-    public string AiPrivacyText => _localization["AI_Settings_Privacy"];
-    public string AiEnabledText => _localization["AI_Settings_Enabled"];
-    public string AiProviderText => _localization["AI_Settings_Provider"];
-    public string AiEndpointText => _localization["AI_Settings_Endpoint"];
-    public string AiModelText => _localization["AI_Settings_Model"];
-    public string AiKeyText => _localization["AI_Settings_Key"];
-    public string AiSaveText => _localization["AI_Settings_Save"];
-    public string AiDeleteKeyText => _localization["AI_Settings_DeleteKey"];
-    public string AiTestText => _localization["AI_Settings_Test"];
-
-    public IReadOnlyList<string> AiProviders { get; } = new[] { "OpenAI", "OpenAiCompatible" };
-
-    [ObservableProperty] private bool _aiEnabled;
-    [ObservableProperty] private string _selectedAiProvider = "OpenAI";
-    [ObservableProperty] private string _aiEndpointDraft = "https://api.openai.com/v1/";
-    [ObservableProperty] private string _aiModelDraft = "gpt-5-mini";
-    [ObservableProperty] private string _aiKeyDraft = string.Empty;
-    [ObservableProperty] private string _aiStatusText = string.Empty;
-    [ObservableProperty] private bool _isTestingAi;
-
-    public bool SaveAiConfiguration()
-    {
-        try
-        {
-            var provider = Enum.TryParse<AiProviderKind>(SelectedAiProvider, true, out var parsed)
-                ? parsed : throw new AiProviderException(AiErrorKind.InvalidConfiguration, "AI_Error_InvalidEndpoint");
-            var endpoint = AiEndpointPolicy.Normalize(AiEndpointDraft, provider);
-            if (string.IsNullOrWhiteSpace(AiModelDraft) || AiModelDraft.Trim().Length > 200)
-                throw new AiProviderException(AiErrorKind.InvalidConfiguration, "AI_Error_InvalidModel");
-
-            var previous = _settingsService.Current;
-            var previousProvider = Enum.TryParse<AiProviderKind>(previous.AiProvider, true, out var oldProvider)
-                ? oldProvider : AiProviderKind.OpenAI;
-            Uri? previousEndpoint = null;
-            try { previousEndpoint = AiEndpointPolicy.Normalize(previous.AiEndpoint, previousProvider); } catch { }
-            if (previousEndpoint is not null && (previousProvider != provider ||
-                !previousEndpoint.Authority.Equals(endpoint.Authority, StringComparison.OrdinalIgnoreCase)))
-                _aiCredentials.Delete(new AiCredentialKey(previousProvider, previousEndpoint.Authority));
-
-            if (!string.IsNullOrWhiteSpace(AiKeyDraft))
-                _aiCredentials.Save(new AiCredentialKey(provider, endpoint.Authority), AiKeyDraft);
-            _settingsService.Update(settings =>
-            {
-                settings.AiEnabled = AiEnabled;
-                settings.AiProvider = provider.ToString();
-                settings.AiEndpoint = endpoint.AbsoluteUri;
-                settings.AiModel = AiModelDraft.Trim();
-            });
-            AiEndpointDraft = endpoint.AbsoluteUri;
-            AiKeyDraft = string.Empty;
-            AiStatusText = _localization["AI_Settings_Saved"];
-            return true;
-        }
-        catch (Exception ex) when (ex is AiProviderException or ArgumentException)
-        {
-            AiStatusText = ex is AiProviderException providerException
-                ? _localization[providerException.Message] : _localization["AI_Error_InvalidCredential"];
-            return false;
-        }
-    }
-
-    public void DeleteAiCredential()
-    {
-        try
-        {
-            var provider = Enum.TryParse<AiProviderKind>(SelectedAiProvider, true, out var parsed) ? parsed : AiProviderKind.OpenAI;
-            var endpoint = AiEndpointPolicy.Normalize(AiEndpointDraft, provider);
-            _aiCredentials.Delete(new AiCredentialKey(provider, endpoint.Authority));
-            AiKeyDraft = string.Empty;
-            AiStatusText = _localization["AI_Settings_KeyDeleted"];
-        }
-        catch (AiProviderException ex) { AiStatusText = _localization[ex.Message]; }
-    }
-
-    public async Task TestAiConnectionAsync()
-    {
-        if (IsTestingAi) return;
-        if (!SaveAiConfiguration()) return;
-        try
-        {
-            var settings = _settingsService.Current;
-            var provider = Enum.Parse<AiProviderKind>(settings.AiProvider, true);
-            var configuration = new AiConfiguration(provider,
-                AiEndpointPolicy.Normalize(settings.AiEndpoint, provider), settings.AiModel, 30);
-            var credential = _aiCredentials.Retrieve(new AiCredentialKey(provider, configuration.Endpoint.Authority))
-                ?? throw new AiProviderException(AiErrorKind.MissingCredential, "AI_Error_MissingCredential");
-            IsTestingAi = true;
-            AiStatusText = _localization["AI_Settings_Testing"];
-            var request = new AiProviderRequest(AiOperation.Explain, "Reply with OK.", null, "Unknown", false);
-            await _aiProviderClient.StreamAsync(configuration, credential, request, null, CancellationToken.None);
-            AiStatusText = _localization["AI_Settings_TestSucceeded"];
-        }
-        catch (AiProviderException ex) { AiStatusText = _localization[ex.Message]; }
-        finally { IsTestingAi = false; }
-    }
-
     public event Action<int>? TerminalFontSizePreviewChanged;
 
     [ObservableProperty]
@@ -259,50 +187,36 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     public bool TerminalAutoClear
     {
-        get => _settingsService.Current.TerminalAutoClear;
-        set { _settingsService.Update(settings => settings.TerminalAutoClear = value); OnPropertyChanged(); }
+        get => _runOptionsDraft.TerminalAutoClear;
+        set { _runOptionsDraft.TerminalAutoClear = value; OnPropertyChanged(); }
     }
 
     public bool NotifyOnFail
     {
-        get => _settingsService.Current.NotifyOnFail;
-        set { _settingsService.Update(settings => settings.NotifyOnFail = value); OnPropertyChanged(); }
+        get => _runOptionsDraft.NotifyOnFail;
+        set { _runOptionsDraft.NotifyOnFail = value; OnPropertyChanged(); }
     }
 
     public bool LiveFlush
     {
-        get => _settingsService.Current.LiveFlush;
-        set { _settingsService.Update(settings => settings.LiveFlush = value); OnPropertyChanged(); }
+        get => _runOptionsDraft.LiveFlush;
+        set { _runOptionsDraft.LiveFlush = value; OnPropertyChanged(); }
     }
 
     public bool AutoStart
     {
-        get => _settingsService.Current.AutoStart;
+        get => _runOptionsDraft.AutoStart;
         set
         {
-            if (_settingsService.Current.AutoStart == value) return;
-
-            ErrorMessage = string.Empty;
-            try
-            {
-                // 先更新 Windows 启动项，成功后才持久化，避免 UI/配置与系统状态不一致。
-                _startupService.SetEnabled(value);
-                _settingsService.Update(settings => settings.AutoStart = value);
-                OnPropertyChanged();
-            }
-            catch (Exception ex)
-            {
-                ErrorMessage = _localization["Error_AutoStartFailed"];
-                OnPropertyChanged(); // 将 CheckBox 恢复为真实配置值
-                DebugWriteError("Settings: 更新开机自启失败", ex);
-            }
+            _runOptionsDraft.AutoStart = value;
+            OnPropertyChanged();
         }
     }
 
     public bool AutoRefreshScripts
     {
-        get => _settingsService.Current.AutoRefreshScripts;
-        set { _settingsService.Update(settings => settings.AutoRefreshScripts = value); OnPropertyChanged(); }
+        get => _runOptionsDraft.AutoRefreshScripts;
+        set { _runOptionsDraft.AutoRefreshScripts = value; OnPropertyChanged(); }
     }
 
     // ---- 语言 ----
@@ -328,8 +242,7 @@ public sealed partial class SettingsViewModel : ObservableObject
     public void ApplyLanguageSelection()
     {
         if (SelectedLanguage == null) return;
-        if (!string.Equals(SelectedLanguage.Code, _localization.CurrentLanguage, StringComparison.OrdinalIgnoreCase))
-            _localization.SetLanguage(SelectedLanguage.Code);
+        // 语言与运行选项一起在确定时提交，取消不改变应用语言。
     }
 
     // ---- 分组一：脚本路径 ----
@@ -441,6 +354,7 @@ public sealed partial class SettingsViewModel : ObservableObject
                     Path = sp.Path,
                     IsValid = valid,
                     StatusText = valid ? _localization["Settings_Valid"] : _localization["Settings_Invalid"],
+                    RemoveText = RemovePathText,
                 });
             }
         }
@@ -462,6 +376,7 @@ public sealed partial class SettingsViewModel : ObservableObject
                     Version = i.Version,
                     IsDefault = i.IsDefault,
                     StatusText = _localization["Settings_Connected"],
+                    RemoveText = RemoveInterpreterText,
                 });
             }
         }
@@ -481,6 +396,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         OnPropertyChanged(nameof(GroupInterpreters));
         OnPropertyChanged(nameof(AddInterpreterText));
         OnPropertyChanged(nameof(GroupRunOptions));
+        OnPropertyChanged(nameof(RunAndTerminalText));
         OnPropertyChanged(nameof(OptAutoClearText));
         OnPropertyChanged(nameof(OptNotifyOnFailText));
         OnPropertyChanged(nameof(OptLiveFlushText));
@@ -493,11 +409,6 @@ public sealed partial class SettingsViewModel : ObservableObject
         OnPropertyChanged(nameof(OkText));
         OnPropertyChanged(nameof(CancelText));
         OnPropertyChanged(nameof(ConnectedText));
-        OnPropertyChanged(nameof(GroupAi)); OnPropertyChanged(nameof(AiPrivacyText));
-        OnPropertyChanged(nameof(AiEnabledText)); OnPropertyChanged(nameof(AiProviderText));
-        OnPropertyChanged(nameof(AiEndpointText)); OnPropertyChanged(nameof(AiModelText));
-        OnPropertyChanged(nameof(AiKeyText)); OnPropertyChanged(nameof(AiSaveText));
-        OnPropertyChanged(nameof(AiDeleteKeyText)); OnPropertyChanged(nameof(AiTestText));
         RefreshLists(); // 行内状态文案（Valid/Invalid）本地化重建
     }
 
